@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Sage Garden</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#e8ebe0;font-family:'DM Sans',sans-serif;color:#3a4032;min-height:100vh;padding:50px 40px 80px;position:relative}
+  .blob{position:absolute;border-radius:50%;filter:blur(60px);opacity:.4;pointer-events:none}
+  .b1{width:300px;height:300px;background:#c5d4a8;top:5%;right:-50px}
+  .b2{width:260px;height:260px;background:#d8c4a0;bottom:10%;left:-60px}
+  .wrap{position:relative;z-index:1;max-width:780px;margin:0 auto}
+  .hd{text-align:center;margin-bottom:36px}
+  .hd h1{font-family:'Cormorant Garamond',serif;font-weight:400;font-size:58px;letter-spacing:-.02em}
+  .hd h1 em{color:#7a8a5a}
+  .hd .s{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:19px;color:#6a7258;margin-top:4px}
+  .counter{background:#fafaf5;border-radius:200px;padding:40px;text-align:center;margin:0 auto 28px;max-width:480px;box-shadow:0 8px 30px rgba(90,100,70,.08)}
+  .bn{font-family:'Cormorant Garamond',serif;font-size:96px;color:#4a5838;line-height:1}
+  .bl{font-style:italic;font-family:'Cormorant Garamond',serif;font-size:20px;color:#7a8670;margin-top:4px}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+  .card{background:#fafaf5;border-radius:24px;padding:30px 26px;position:relative;overflow:hidden}
+  .card:nth-child(odd){border-radius:120px 24px 120px 24px}
+  .card:nth-child(even){border-radius:24px 120px 24px 120px}
+  .ci{font-size:30px;margin-bottom:10px}
+  .ct{font-family:'Cormorant Garamond',serif;font-size:26px;color:#4a5838}
+  .cd{font-size:13px;color:#7a8070;margin-top:6px;font-style:italic;line-height:1.5}
+  .leaf{position:absolute;right:-20px;bottom:-30px;width:100px;height:100px;background:#c5d4a8;border-radius:0 100% 0 0;opacity:.4}
+</style></head>
+<body>
+<div class="blob b1"></div><div class="blob b2"></div>
+<div class="wrap">
+  <div class="hd"><h1>Our <em>little</em> garden</h1><div class="s">— three hundred eighteen days growing —</div></div>
+  <div class="counter"><div class="bn">318</div><div class="bl">days in bloom</div></div>
+  <div class="grid">
+    <div class="card"><div class="ci">🌿</div><div class="ct">Memories</div><div class="cd">quiet moments, remembered</div><div class="leaf"></div></div>
+    <div class="card"><div class="ci">📜</div><div class="ct">Letters</div><div class="cd">softly folded, kept close</div></div>
+    <div class="card"><div class="ci">🌸</div><div class="ct">Our story</div><div class="cd">one season at a time</div></div>
+    <div class="card"><div class="ci">♪</div><div class="ct">Songs</div><div class="cd">our slow afternoon</div></div>
+  </div>
+</div>
+</body></html>
