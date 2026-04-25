@@ -115,7 +115,7 @@ export async function renderPlaylist() {
           height: "1px",
           width: "1px",
           videoId: parsed.id,
-          host: "https://www.youtube-nocookie.com",
+          host: "https://www.youtube.com",
           playerVars: {
             start: parsed.start,
             autoplay: state.autoPlayNext ? 1 : 0,
