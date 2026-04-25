@@ -23,6 +23,21 @@
     }
   };
 
+  // --- Global Error Logger ---
+  window.onerror = (msg, url, line, col, error) => {
+    Store.log("error", msg, {
+      url,
+      line,
+      col,
+      stack: error ? error.stack : null,
+    });
+  };
+  window.onunhandledrejection = (event) => {
+    Store.log("promise_error", event.reason ? event.reason.message : "unknown", {
+      stack: event.reason ? event.reason.stack : null,
+    });
+  };
+
   async function loadWorldMap() {
     if (worldGeoJSON) return;
     try {
@@ -783,6 +798,7 @@
   }
 
   function showLightbox(p) {
+    Store.log("debug", "opening lightbox", { photoId: p.id });
     document.body.classList.add("no-scroll");
     const el = document.createElement("div");
     el.className = "lightbox";
@@ -1056,6 +1072,7 @@
   }
 
   function showPlaceDialog(initialScroll = 0) {
+    Store.log("debug", "opening showPlaceDialog", { placeId: openPlaceId });
     const d = Store.get();
     const p = d.places.find((x) => x.id === openPlaceId);
     if (!p) {
@@ -1782,6 +1799,57 @@
     };
   }
 
+  function showLogsDialog() {
+    const scrim = document.createElement("div");
+    scrim.className = "scrim";
+    scrim.style.zIndex = "3000";
+    scrim.innerHTML = `
+      <div class="dialog" style="max-width:800px; height:80vh; display:flex; flex-direction:column; padding:24px">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px">
+          <h2 style="margin:0">System Logs</h2>
+          <button class="btn soft" onclick="this.closest('.scrim').remove()">Close</button>
+        </div>
+        <div id="log-list" style="flex:1; overflow-y:auto; background:#121212; color:#e0e0e0; padding:20px; font-family:monospace; font-size:12px; border-radius:16px; white-space:pre-wrap; border: 1px solid #333;">
+          Loading logs from cloud...
+        </div>
+        <div style="margin-top:16px; font-size:12px; color:var(--ink-soft)">
+          * showing last 100 events from all devices
+        </div>
+      </div>
+    `;
+    document.body.appendChild(scrim);
+
+    Store.getLogs(100).then((logs) => {
+      const list = document.getElementById("log-list");
+      if (!logs || logs.length === 0) {
+        list.innerHTML = "No logs found in cloud.";
+        return;
+      }
+      list.innerHTML = logs
+        .map((l) => {
+          const time = new Date(l.ts).toLocaleString();
+          const color =
+            l.type === "error" || l.type === "promise_error"
+              ? "#ff6b6b"
+              : l.type === "debug"
+                ? "#4dabf7"
+                : "#a9e34b";
+          return `<div style="margin-bottom:12px; border-bottom:1px solid #222; padding-bottom:8px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px">
+            <span style="color:${color}; font-weight:bold;">[${l.type.toUpperCase()}]</span>
+            <span style="color:#666; font-size:11px;">${time}</span>
+          </div>
+          <div style="color:#fff; margin-bottom:4px">${esc(l.msg)}</div>
+          ${l.placeId ? `<div style="color:#ffd43b">Place ID: ${l.placeId}</div>` : ""}
+          ${l.photoId ? `<div style="color:#ffd43b">Photo ID: ${l.photoId}</div>` : ""}
+          ${l.stack ? `<div style="color:#888; font-size:11px; background:#1a1a1a; padding:8px; border-radius:6px; margin:6px 0; overflow-x:auto;">${esc(l.stack)}</div>` : ""}
+          <div style="color:#555; font-size:10px; margin-top:4px;">Device: ${esc(l.ua)}</div>
+        </div>`;
+        })
+        .join("");
+    });
+  }
+
   function renderAdminDrawer() {
     // Clean up any existing drawer + scrim first
     document
@@ -1838,8 +1906,9 @@
         <h3>Back up &amp; restore</h3>
         <p style="font-family:var(--serif);font-style:italic;color:var(--ink-soft);font-size:14px;margin-bottom:12px;line-height:1.5">export a JSON file as manual backup. keep it in Google Drive or email.</p>
         <div class="drawer-actions">
-          <button class="btn soft" id="exportBtn">${icon("download")} Export backup</button>
-          <label class="btn soft" style="cursor:pointer">${icon("upload")} Import<input type="file" id="importBtn" accept="application/json" style="display:none"></label>
+          <button class="btn soft" id="exportBtn" style="flex:1">${icon("download")} Export</button>
+          <button class="btn soft" id="logsBtn" style="flex:1">${icon("settings")} Logs</button>
+          <label class="btn soft" style="cursor:pointer; flex:1">${icon("upload")} Import<input type="file" id="importBtn" accept="application/json" style="display:none"></label>
         </div>
       </div>
 
@@ -1883,6 +1952,11 @@
     };
 
     drawer.querySelector("#exportBtn").onclick = () => Store.exportJSON();
+    drawer.querySelector("#logsBtn").onclick = () => {
+      adminOpen = false;
+      renderAdminDrawer();
+      showLogsDialog();
+    };
     const connectBtn = drawer.querySelector("#connectCloudBtn");
     if (connectBtn) connectBtn.onclick = () => openFirebaseConnect();
     const pushBtn = drawer.querySelector("#pushCloudBtn");

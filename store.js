@@ -52,7 +52,7 @@
     if (window._fbLoaded) return;
     const [
       { initializeApp, getApps, getApp, deleteApp },
-      { getFirestore, doc, setDoc, onSnapshot, getDoc, collection, deleteDoc },
+      { getFirestore, doc, setDoc, onSnapshot, getDoc, collection, deleteDoc, addDoc, query, orderBy, limit, serverTimestamp, getDocs },
     ] = await Promise.all([
       import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"),
       import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"),
@@ -69,6 +69,12 @@
       getDoc,
       collection,
       deleteDoc,
+      addDoc,
+      query,
+      orderBy,
+      limit,
+      serverTimestamp,
+      getDocs,
     };
   }
 
@@ -570,6 +576,38 @@
       }
       await pushToFirebase(this._data);
       alert("Synced to cloud ♡");
+    },
+    async log(type, msg, extra = {}) {
+      const entry = {
+        ts: new Date().toISOString(),
+        type,
+        msg,
+        ua: navigator.userAgent,
+        ...extra,
+      };
+      console.log(`[${type}] ${msg}`, extra);
+      if (fb.connected) {
+        const { collection, addDoc, serverTimestamp } = window._fbLoaded;
+        try {
+          await addDoc(collection(fb.db, "logs"), {
+            ...entry,
+            serverTs: serverTimestamp(),
+          });
+        } catch (e) {
+          console.error("Failed to write remote log", e);
+        }
+      }
+    },
+    async getLogs(count = 50) {
+      if (!fb.connected) return [];
+      const { collection, query, orderBy, limit, getDocs } = window._fbLoaded;
+      const q = query(
+        collection(fb.db, "logs"),
+        orderBy("serverTs", "desc"),
+        limit(count),
+      );
+      const snap = await getDocs(q);
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     },
   };
 
