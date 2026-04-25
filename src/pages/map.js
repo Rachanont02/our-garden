@@ -201,13 +201,13 @@ export function showPlaceDialog(initialScroll = 0) {
           .map((src, i) => {
             const id = `legacy-${i}`;
             const isSel = state.selectedPhotos.includes(id);
-            return `<div class="pp ${isSel ? "selected" : ""}" data-ppi="${id}"><img src="${esc(src)}"><div class="m-sel-check">${isSel ? "✓" : ""}</div>${!state.isSelectMode ? `<button class="m-del" data-legacy-ppdel="${i}">×</button>` : ""}</div>`;
+            return `<div class="pp ${isSel ? "selected" : ""}" data-ppi="${id}"><img src="${esc(src)}" loading="lazy"><div class="m-sel-check">${isSel ? "✓" : ""}</div>${!state.isSelectMode ? `<button class="m-del" data-legacy-ppdel="${i}">×</button>` : ""}</div>`;
           })
           .join("")}
         ${pPhotos
           .map((ph) => {
             const isSel = state.selectedPhotos.includes(ph.id);
-            return `<div class="pp ${isSel ? "selected" : ""}" data-ppid="${esc(ph.id)}"><img src="${esc(ph.url)}"><div class="m-sel-check">${isSel ? "✓" : ""}</div>${!state.isSelectMode ? `<button class="m-del" data-ppdel="${esc(ph.id)}">×</button>` : ""}</div>`;
+            return `<div class="pp ${isSel ? "selected" : ""}" data-ppid="${esc(ph.id)}"><img src="${esc(ph.url)}" loading="lazy"><div class="m-sel-check">${isSel ? "✓" : ""}</div>${!state.isSelectMode ? `<button class="m-del" data-ppdel="${esc(ph.id)}">×</button>` : ""}</div>`;
           })
           .join("")}
         ${!state.isSelectMode ? `<div class="pp-add" id="addPP">+</div>` : ""}
