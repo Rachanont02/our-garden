@@ -1,0 +1,24 @@
+{
+  "name": "couple-memory",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Rachanont02/our-garden.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Rachanont02/our-garden/issues"
+  },
+  "homepage": "https://github.com/Rachanont02/our-garden#readme",
+  "devDependencies": {
+    "esbuild": "^0.28.0"
+  }
+}

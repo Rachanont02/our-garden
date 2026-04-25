@@ -2,11 +2,8 @@
 (function () {
   const root = document.getElementById("root");
   let adminOpen = false;
-  let lightboxSrc = null;
   let openLetter = null;
   let openPlaceId = null;
-  let mapInstance = null;
-  let mapMarkers = [];
   let gallerySearch = "";
   let ytPlayer = null;
   let ytState = -1; // -1: unstarted, 0: ended, 1: playing, 2: paused, 3: buffering, 5: cued
@@ -341,18 +338,15 @@
     // Home Play functionality
     const homeCard = document.getElementById("homeSongCard");
     const homePlayBtn = document.getElementById("homePlayIcon");
-    if (homeCard && homePlayBtn && window.YT && window.YT.Player) {
+    if (homeCard && homePlayBtn) {
       const ytUrl = homeCard.dataset.yt;
       if (ytUrl) {
-        const parsed = parseYouTubeUrl(ytUrl);
-        if (parsed.id) {
-          if (ytPlayer) {
-            try {
-              ytPlayer.destroy();
-            } catch (e) {}
-            ytPlayer = null;
-            ytState = -1;
-          }
+        const initPlayer = async () => {
+          if (ytPlayer) return; // already initialized
+          await loadYouTubeAPI();
+          if (!window.YT || !window.YT.Player) return;
+          const parsed = parseYouTubeUrl(ytUrl);
+          if (!parsed.id) return;
 
           let hState = -1;
           ytPlayer = new YT.Player("home-yt-frame", {
@@ -360,48 +354,35 @@
             width: "1px",
             videoId: parsed.id,
             host: "https://www.youtube-nocookie.com",
-            playerVars: {
-              start: parsed.start,
-              autoplay: 0,
-            },
+            playerVars: { start: parsed.start, autoplay: 0 },
             events: {
               onReady: (e) => {
-                if (autoPlayNext) {
-                  autoPlayNext = false;
-                  if (typeof e.target.playVideo === "function")
-                    e.target.playVideo();
-                }
+                e.target.playVideo();
               },
               onStateChange: (e) => {
                 hState = e.data;
                 const vinyl = document.getElementById("homeVinyl");
-                if (homePlayBtn)
-                  homePlayBtn.innerHTML = icon(hState === 1 ? "pause" : "play");
-                if (vinyl) {
-                  vinyl.classList.toggle("playing", hState === 1);
-                }
+                if (homePlayBtn) homePlayBtn.innerHTML = icon(hState === 1 ? "pause" : "play");
+                if (vinyl) vinyl.classList.toggle("playing", hState === 1);
               },
             },
           });
+        };
 
-          homePlayBtn.onclick = (e) => {
-            e.stopPropagation();
-            if (!ytPlayer || typeof ytPlayer.playVideo !== "function") {
-              autoPlayNext = true;
-              return;
-            }
-            if (hState === 1) ytPlayer.pauseVideo();
-            else ytPlayer.playVideo();
-          };
+        homePlayBtn.onclick = (e) => {
+          e.stopPropagation();
+          if (!ytPlayer) {
+            initPlayer();
+            return;
+          }
+          if (ytPlayer.getPlayerState && ytPlayer.getPlayerState() === 1) ytPlayer.pauseVideo();
+          else if (ytPlayer.playVideo) ytPlayer.playVideo();
+        };
 
-          // Also allow clicking the whole card, unless clicking play button
-          homeCard.onclick = (e) => {
-            if (e.target.closest("#homePlayIcon")) return;
-            location.hash = "#/playlist";
-          };
-        } else {
-          homeCard.onclick = () => (location.hash = "#/playlist");
-        }
+        homeCard.onclick = (e) => {
+          if (e.target.closest("#homePlayIcon")) return;
+          location.hash = "#/playlist";
+        };
       } else {
         homeCard.onclick = () => (location.hash = "#/playlist");
       }
@@ -984,27 +965,10 @@
           const fallback =
             'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="160" height="106"><rect width="160" height="106" fill="%23f2f4ec"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="40">📍</text></svg>';
 
-          // Fetch country code from coordinates async
           const pLat = p.data.value[1];
           const pLng = p.data.value[0];
-          fetch(
-            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${pLat}&longitude=${pLng}&localityLanguage=en`,
-          )
-            .then((res) => res.json())
-            .then((data) => {
-              let src = fallback;
-              if (data && data.countryCode) {
-                src = `https://flagcdn.com/w160/${data.countryCode.toLowerCase()}.png`;
-              }
-              window._wikiImageCache[pName] = src;
-              try { callback(ticket, getHtml(src)); } catch (e) {}
-            })
-            .catch(() => {
-              window._wikiImageCache[pName] = fallback;
-              try { callback(ticket, getHtml(fallback)); } catch (e) {}
-            });
 
-          return getHtml(fallback); // Show fallback while loading
+          return getHtml(fallback);
         },
         backgroundColor: "#ffffff",
         borderColor: "#e1e3d6",
