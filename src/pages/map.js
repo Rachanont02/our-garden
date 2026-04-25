@@ -8,7 +8,7 @@ import {
   fileToDataURL,
 } from "../utils.js";
 import { topbar, menu, wireTopbar } from "../components.js";
-import { loadECharts, loadWorldMap, disposeCharts } from "../loaders.js";
+import { loadLeaflet, disposeCharts } from "../loaders.js";
 import { render } from "../main.js";
 import { showLightbox } from "./gallery.js";
 
@@ -52,104 +52,89 @@ export async function renderMap() {
   wireTopbar();
   document.getElementById("addPlaceBtn").onclick = () => openPlaceEditor();
 
-  await loadECharts();
-  if (!window.echarts) {
+  await loadLeaflet();
+  if (!window.L) {
     state.root.querySelector("#map").innerHTML =
       '<div class="empty"><span class="leaf">❦</span>Map failed to load.</div>';
     return;
   }
-  await loadWorldMap();
-  if (state.worldGeoJSON && window.echarts)
-    echarts.registerMap("world", state.worldGeoJSON);
-  const chartDom = document.getElementById("map");
-  if (!chartDom) return;
-  const myChart = echarts.init(chartDom);
+
+  const mapDom = document.getElementById("map");
+  if (!mapDom) return;
+
+  // Initialize Leaflet
+  const osloCoord = [59.91, 10.75];
+  const map = L.map(mapDom, {
+    center: osloCoord,
+    zoom: 3,
+    zoomControl: false,
+    attributionControl: false,
+  });
+  mapDom._leaflet_map = map;
+
+  L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    {},
+  ).addTo(map);
+
   const sortedPlaces = [...d.places]
     .sort((a, b) => new Date(a.date) - new Date(b.date))
     .filter((p) => typeof p.lng === "number" && typeof p.lat === "number");
-  const scatterData = sortedPlaces.map((p) => ({
-    name: p.name,
-    value: [p.lng, p.lat, p.id],
-    date: p.date,
-  }));
-  const osloCoord = [10.75, 59.91];
-  const linesData = sortedPlaces
-    .filter(
-      (p) =>
-        Math.sqrt(
-          Math.pow(p.lng - osloCoord[0], 2) + Math.pow(p.lat - osloCoord[1], 2),
-        ) > 0.5,
-    )
-    .map((p) => ({ coords: [osloCoord, [p.lng, p.lat]] }));
 
-  myChart.setOption({
-    backgroundColor: "transparent",
-    tooltip: {
-      trigger: "item",
-      formatter: (p) => {
-        if (p.seriesType !== "scatter") return "";
-        const fallback =
-          'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="160" height="106"><rect width="160" height="106" fill="%23f2f4ec"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="40">📍</text></svg>';
-        return `
-          <div style="text-align:center; width: 160px;">
-            <img src="${fallback}" style="width: 160px; height: 106px; object-fit: cover; display: block; margin-bottom: 12px; background: #eee; border-radius: 4px;">
-            <div style="font-family:serif; font-weight: 600; font-size: 16px; color:#2a3625;">${p.name}</div>
-            <div style="font-size: 11px; color:#7a8a60; margin-top: 4px;">${fmtDate(p.data.date)}</div>
-          </div>`;
-      },
-      backgroundColor: "#ffffff",
-      padding: [8, 8, 16, 8],
-    },
-    geo: {
-      map: "world",
-      roam: true,
-      itemStyle: { areaColor: "#2b3626", borderColor: "#4a5838" },
-    },
-    series: [
-      {
-        type: "scatter",
-        coordinateSystem: "geo",
-        data: scatterData,
-        symbol: "pin",
-        symbolSize: 18,
-        symbolOffset: [0, "-50%"],
-        itemStyle: { color: "#e6b99a" },
-      },
-      {
-        type: "lines",
-        coordinateSystem: "geo",
-        data: linesData,
-        lineStyle: {
-          color: "#ffffff",
-          width: 1,
-          opacity: 0.4,
-          curveness: 0.3,
-          type: "dashed",
-        },
-      },
-      {
-        type: "scatter",
-        coordinateSystem: "geo",
-        data: [{ name: "Home 🏠", value: [10.75, 59.91] }],
-        symbol: "pin",
-        symbolSize: 26,
-        symbolOffset: [0, "-50%"],
-        itemStyle: { color: "#e05a5a" },
-        label: { show: true, formatter: "🏠", fontSize: 10 },
-        silent: true,
-      },
-    ],
-  });
+  const markers = [];
+  sortedPlaces.forEach((p) => {
+    const m = L.marker([p.lat, p.lng]).addTo(map);
+    m.on("click", () => {
+      state.openPlaceId = p.id;
+      render();
+    });
 
-  myChart.on("click", (params) => {
-    if (params.componentType === "series" && params.seriesType === "scatter") {
-      const p = Store.get().places.find((x) => x.id === params.data.value[2]);
-      if (p) {
-        state.openPlaceId = p.id;
-        render();
-      }
+    const fallback =
+      'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="160" height="106"><rect width="160" height="106" fill="%23f2f4ec"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="40">📍</text></svg>';
+
+    m.bindTooltip(
+      `
+      <div style="text-align:center; width: 140px; pointer-events: none;">
+        <div style="font-family:serif; font-weight: 600; font-size: 14px; color:#2a3625;">${esc(p.name)}</div>
+        <div style="font-size: 10px; color:#7a8a60; margin-top: 2px;">${fmtDate(p.date)}</div>
+      </div>`,
+      { direction: "top", offset: [0, -10], opacity: 0.9 },
+    );
+
+    // Draw lines from Oslo
+    const dist = Math.sqrt(
+      Math.pow(p.lat - osloCoord[0], 2) + Math.pow(p.lng - osloCoord[1], 2),
+    );
+    if (dist > 0.5) {
+      L.polyline([osloCoord, [p.lat, p.lng]], {
+        color: "#ffffff",
+        weight: 1,
+        opacity: 0.3,
+        dashArray: "5, 10",
+      }).addTo(map);
     }
+    markers.push(m);
   });
+
+  // Home marker
+  L.marker(osloCoord, {
+    icon: L.divIcon({
+      className: "home-marker",
+      html: `<div style="font-size:24px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5))">🏠</div>`,
+      iconSize: [30, 30],
+      iconAnchor: [15, 15],
+    }),
+  })
+    .addTo(map)
+    .bindTooltip("Home", { direction: "top" });
+
+  if (markers.length > 0) {
+    const group = new L.featureGroup([
+      ...markers,
+      L.marker(osloCoord),
+    ]);
+    map.fitBounds(group.getBounds().pad(0.2));
+  }
 
   state.root.querySelectorAll(".place-item").forEach((el) => {
     el.onclick = () => {
@@ -158,7 +143,6 @@ export async function renderMap() {
     };
   });
 
-  window.addEventListener("resize", () => myChart && myChart.resize());
   if (state.openPlaceId) showPlaceDialog();
 }
 
@@ -403,44 +387,34 @@ export function openPlaceEditor(place) {
   `;
   document.body.appendChild(scrim);
 
-  let miniChart;
+  let miniMap;
   setTimeout(async () => {
-    await loadECharts();
-    await loadWorldMap();
+    await loadLeaflet();
     const dom = document.getElementById("miniMap");
     if (!dom) return;
-    miniChart = echarts.init(dom);
     const lat = parseFloat(p.lat) || 20;
     const lng = parseFloat(p.lng) || 0;
-    const update = (mlat, mlng) => {
-      miniChart.setOption({
-        backgroundColor: "#1a2118",
-        geo: {
-          map: "world",
-          roam: true,
-          center: [mlng, mlat],
-          zoom: p.lat ? 5 : 1.2,
-        },
-        series: [
-          {
-            type: "scatter",
-            coordinateSystem: "geo",
-            data: [[mlng, mlat]],
-            symbol: "pin",
-            symbolSize: 18,
-            itemStyle: { color: "#e6b99a" },
-          },
-        ],
-      });
-    };
-    update(lat, lng);
-    miniChart.getZr().on("click", (e) => {
-      const coord = miniChart.convertFromPixel("geo", [e.offsetX, e.offsetY]);
-      if (coord) {
-        document.getElementById("nlng").value = coord[0].toFixed(6);
-        document.getElementById("nlat").value = coord[1].toFixed(6);
-        update(coord[1], coord[0]);
-      }
+
+    miniMap = L.map(dom, {
+      center: [lat, lng],
+      zoom: p.lat ? 5 : 1,
+      zoomControl: false,
+      attributionControl: false,
+    });
+    dom._leaflet_map = miniMap;
+
+    L.tileLayer(
+      "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    ).addTo(miniMap);
+
+    let pin = L.marker([lat, lng]).addTo(miniMap);
+
+    miniMap.on("click", (e) => {
+      const { lat: mlat, lng: mlng } = e.latlng;
+      document.getElementById("nlat").value = mlat.toFixed(6);
+      document.getElementById("nlng").value = mlng.toFixed(6);
+      if (pin) pin.setLatLng([mlat, mlng]);
+      else pin = L.marker([mlat, mlng]).addTo(miniMap);
     });
   }, 50);
 
@@ -457,11 +431,10 @@ export function openPlaceEditor(place) {
         const lng = parseFloat(data[0].lon);
         document.getElementById("nlat").value = lat.toFixed(6);
         document.getElementById("nlng").value = lng.toFixed(6);
-        if (miniChart)
-          miniChart.setOption({
-            geo: { center: [lng, lat], zoom: 5 },
-            series: [{ data: [[lng, lat]] }],
-          });
+        if (miniMap) {
+          miniMap.setView([lat, lng], 5);
+          L.marker([lat, lng]).addTo(miniMap);
+        }
       }
     } catch (err) {
       alert("Search failed");

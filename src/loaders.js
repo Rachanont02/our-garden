@@ -1,27 +1,25 @@
 import { state } from "./state.js";
 
-let echartsPromise = null;
-export function loadECharts() {
-  if (echartsPromise) return echartsPromise;
-  echartsPromise = new Promise((resolve, reject) => {
-    if (window.echarts) return resolve();
-    const existing = document.querySelector('script[src*="echarts.min.js"]');
-    if (existing) {
-      const cb = () => {
-        if (window.echarts) resolve();
-        else setTimeout(cb, 100);
-      };
-      cb();
-      return;
-    }
+let leafletPromise = null;
+export function loadLeaflet() {
+  if (leafletPromise) return leafletPromise;
+  leafletPromise = new Promise((resolve, reject) => {
+    if (window.L) return resolve();
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+    document.head.appendChild(link);
+
     const s = document.createElement("script");
-    s.src = "https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js";
+    s.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
     s.onload = resolve;
     s.onerror = reject;
     document.head.appendChild(s);
   });
-  return echartsPromise;
+  return leafletPromise;
 }
+
+let echartsPromise = null;
 
 let ytPromise = null;
 export function loadYouTubeAPI() {
@@ -53,28 +51,18 @@ export function disposeCharts() {
   try {
     ["map", "miniMap"].forEach((id) => {
       const dom = document.getElementById(id);
-      if (dom && window.echarts) {
-        const instance = echarts.getInstanceByDom(dom);
-        if (instance) instance.dispose();
+      if (dom) {
+        // Handle ECharts
+        if (window.echarts) {
+          const instance = echarts.getInstanceByDom(dom);
+          if (instance) instance.dispose();
+        }
+        // Handle Leaflet (stored on the DOM element for easy access)
+        if (dom._leaflet_map) {
+          dom._leaflet_map.remove();
+          delete dom._leaflet_map;
+        }
       }
     });
   } catch (e) {}
-}
-
-let worldMapPromise = null;
-export function loadWorldMap() {
-  if (state.worldGeoJSON) return Promise.resolve();
-  if (worldMapPromise) return worldMapPromise;
-  worldMapPromise = (async () => {
-    try {
-      const res = await fetch(
-        "https://cdn.jsdelivr.net/npm/echarts@4.9.0/map/json/world.json",
-      );
-      state.worldGeoJSON = await res.json();
-      if (window.echarts) echarts.registerMap("world", state.worldGeoJSON);
-    } catch (e) {
-      console.error("Failed to load world map", e);
-    }
-  })();
-  return worldMapPromise;
 }
