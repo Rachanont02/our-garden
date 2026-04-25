@@ -24,9 +24,11 @@ export function renderHome() {
         <div class="total-cell"><span class="k">Next anniversary in</span><span class="v">${p.daysUntilAnniv} days</span></div>
       </div>
       <div class="quick-grid">
-        ${d.songs.length > 0 ? (() => {
-          const rs = d.songs[Math.floor(Math.random() * d.songs.length)];
-          return `
+        ${
+          d.songs.length > 0
+            ? (() => {
+                const rs = d.songs[Math.floor(Math.random() * d.songs.length)];
+                return `
           <div class="home-playlist-card" id="homeSongCard" data-yt="${esc(rs.ytUrl || "")}">
             <div class="hp-vinyl" id="homeVinyl"><img src="${esc(rs.cover)}" class="hp-cover"></div>
             <div class="hp-info">
@@ -37,7 +39,9 @@ export function renderHome() {
             <div class="hp-play-btn" style="font-size:24px; cursor:pointer; z-index:2" id="homePlayIcon">${icon("play")}</div>
             <div id="home-yt-frame" style="position:absolute; width:1px; height:1px; opacity:0; pointer-events:none"></div>
           </div>`;
-        })() : ""}
+              })()
+            : ""
+        }
         <a href="#/gallery" class="q-card">
           <div class="qico">${icon("photo")}</div>
           <h3>Our Gallery</h3>
@@ -72,15 +76,20 @@ export function renderHome() {
 
         let hState = -1;
         state.ytPlayer = new YT.Player("home-yt-frame", {
-          height: "1px", width: "1px", videoId: parsed.id,
+          height: "1px",
+          width: "1px",
+          videoId: parsed.id,
           host: "https://www.youtube-nocookie.com",
           playerVars: { start: parsed.start, autoplay: 0 },
           events: {
-            onReady: (e) => { e.target.playVideo(); },
+            onReady: (e) => {
+              e.target.playVideo();
+            },
             onStateChange: (e) => {
               hState = e.data;
               const vinyl = document.getElementById("homeVinyl");
-              if (homePlayBtn) homePlayBtn.innerHTML = icon(hState === 1 ? "pause" : "play");
+              if (homePlayBtn)
+                homePlayBtn.innerHTML = icon(hState === 1 ? "pause" : "play");
               if (vinyl) vinyl.classList.toggle("playing", hState === 1);
             },
           },
@@ -88,14 +97,25 @@ export function renderHome() {
       };
       homePlayBtn.onclick = (e) => {
         e.stopPropagation();
-        if (!state.ytPlayer) { initPlayer(); return; }
-        if (state.ytPlayer.getPlayerState && state.ytPlayer.getPlayerState() === 1) state.ytPlayer.pauseVideo();
+        if (!state.ytPlayer) {
+          initPlayer();
+          return;
+        }
+        if (
+          state.ytPlayer.getPlayerState &&
+          state.ytPlayer.getPlayerState() === 1
+        )
+          state.ytPlayer.pauseVideo();
         else if (state.ytPlayer.playVideo) state.ytPlayer.playVideo();
       };
       homeCard.onclick = (e) => {
         if (e.target.closest("#homePlayIcon")) return;
         location.hash = "#/playlist";
       };
-    } else { homeCard.onclick = () => (location.hash = "#/playlist"); }
-  } else if (homeCard) { homeCard.onclick = () => (location.hash = "#/playlist"); }
+    } else {
+      homeCard.onclick = () => (location.hash = "#/playlist");
+    }
+  } else if (homeCard) {
+    homeCard.onclick = () => (location.hash = "#/playlist");
+  }
 }

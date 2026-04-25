@@ -9,10 +9,17 @@ import { renderPlaylist } from "./pages/playlist.js";
 
 // --- Global Error Logger ---
 window.onerror = (msg, url, line, col, error) => {
-  Store.log("error", msg, { url, line, col, stack: error ? error.stack : null });
+  Store.log("error", msg, {
+    url,
+    line,
+    col,
+    stack: error ? error.stack : null,
+  });
 };
 window.onunhandledrejection = (event) => {
-  Store.log("promise_error", event.reason ? event.reason.message : "unknown", { stack: event.reason ? event.reason.stack : null });
+  Store.log("promise_error", event.reason ? event.reason.message : "unknown", {
+    stack: event.reason ? event.reason.stack : null,
+  });
 };
 
 // --- Routing ---
@@ -35,12 +42,14 @@ function hideSkeleton() {
 export function render() {
   disposeCharts();
   if (state.ytPlayer) {
-    try { state.ytPlayer.destroy(); } catch (e) {}
+    try {
+      state.ytPlayer.destroy();
+    } catch (e) {}
     state.ytPlayer = null;
     state.ytState = -1;
   }
   document.querySelectorAll(".scrim").forEach((el) => el.remove());
-  
+
   const d = Store.get();
   if (!d.session.unlocked) {
     renderLogin();
@@ -50,12 +59,23 @@ export function render() {
 
   const r = currentRoute();
   switch (r.path) {
-    case "home": renderHome(); break;
-    case "letters": renderLetters(); break;
-    case "gallery": renderGallery(); break;
-    case "map": renderMap(); break;
-    case "playlist": renderPlaylist(); break;
-    default: location.hash = "#/home";
+    case "home":
+      renderHome();
+      break;
+    case "letters":
+      renderLetters();
+      break;
+    case "gallery":
+      renderGallery();
+      break;
+    case "map":
+      renderMap();
+      break;
+    case "playlist":
+      renderPlaylist();
+      break;
+    default:
+      location.hash = "#/home";
   }
   hideSkeleton();
 }

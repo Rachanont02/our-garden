@@ -46,7 +46,9 @@ export function disposeCharts() {
 export async function loadWorldMap() {
   if (state.worldGeoJSON) return;
   try {
-    const res = await fetch("https://cdn.jsdelivr.net/npm/echarts@4.9.0/map/json/world.json");
+    const res = await fetch(
+      "https://cdn.jsdelivr.net/npm/echarts@4.9.0/map/json/world.json",
+    );
     state.worldGeoJSON = await res.json();
     if (window.echarts) echarts.registerMap("world", state.worldGeoJSON);
   } catch (e) {

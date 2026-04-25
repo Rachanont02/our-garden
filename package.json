@@ -6,6 +6,7 @@
   "scripts": {
     "build": "esbuild src/main.js --bundle --minify --outfile=dist/app.js",
     "dev": "esbuild src/main.js --bundle --outfile=dist/app.js --watch",
+    "format": "prettier --write .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -21,6 +22,7 @@
   },
   "homepage": "https://github.com/Rachanont02/our-garden#readme",
   "devDependencies": {
-    "esbuild": "^0.28.0"
+    "esbuild": "^0.28.0",
+    "prettier": "^3.8.3"
   }
 }

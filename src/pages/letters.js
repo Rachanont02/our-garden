@@ -15,7 +15,9 @@ export function renderLetters() {
         <div class="page-sub">softly folded, kept in the drawer</div>
       </div>
       <div class="letters-grid">
-        ${d.letters.map((l) => `
+        ${d.letters
+          .map(
+            (l) => `
           <div class="envelope ${esc(l.color || "peach")}" data-letter="${esc(l.id)}">
             <div class="env-flap"></div>
             <div class="env-seal">♡</div>
@@ -25,7 +27,9 @@ export function renderLetters() {
               <div class="env-title">${esc(l.title || "a little note")}</div>
             </div>
           </div>
-        `).join("")}
+        `,
+          )
+          .join("")}
         <div class="envelope add" id="addLetterBtn">
           <div style="text-align:center"><span>+</span><div>write a new note</div></div>
         </div>
@@ -47,7 +51,10 @@ export function renderLetters() {
 export function showLetterDialog() {
   const d = Store.get();
   const l = d.letters.find((x) => x.id === state.openLetter);
-  if (!l) { state.openLetter = null; return; }
+  if (!l) {
+    state.openLetter = null;
+    return;
+  }
   const scrim = document.createElement("div");
   scrim.className = "scrim letter-scrim";
   scrim.innerHTML = `
@@ -66,9 +73,20 @@ export function showLetterDialog() {
     </div>
   `;
   document.body.appendChild(scrim);
-  scrim.addEventListener("click", (e) => { if (e.target === scrim) { state.openLetter = null; scrim.remove(); } });
-  scrim.querySelector("[data-close]").onclick = () => { state.openLetter = null; scrim.remove(); };
-  scrim.querySelector("[data-edit]").onclick = () => { scrim.remove(); openLetterEditor(l); };
+  scrim.addEventListener("click", (e) => {
+    if (e.target === scrim) {
+      state.openLetter = null;
+      scrim.remove();
+    }
+  });
+  scrim.querySelector("[data-close]").onclick = () => {
+    state.openLetter = null;
+    scrim.remove();
+  };
+  scrim.querySelector("[data-edit]").onclick = () => {
+    scrim.remove();
+    openLetterEditor(l);
+  };
 }
 
 export function openLetterEditor(letter) {
@@ -76,7 +94,9 @@ export function openLetterEditor(letter) {
   const l = letter || {
     from: Store.get().couple.name1 || "",
     to: Store.get().couple.name2 || "",
-    title: "", body: "", color: "peach",
+    title: "",
+    body: "",
+    color: "peach",
     date: new Date().toISOString().slice(0, 10),
   };
   const scrim = document.createElement("div");
@@ -105,10 +125,15 @@ export function openLetterEditor(letter) {
   `;
   document.body.appendChild(scrim);
   let color = l.color;
-  scrim.querySelectorAll(".sw").forEach((sw) => sw.onclick = () => {
-    color = sw.dataset.color;
-    scrim.querySelectorAll(".sw").forEach((s) => s.classList.toggle("active", s === sw));
-  });
+  scrim.querySelectorAll(".sw").forEach(
+    (sw) =>
+      (sw.onclick = () => {
+        color = sw.dataset.color;
+        scrim
+          .querySelectorAll(".sw")
+          .forEach((s) => s.classList.toggle("active", s === sw));
+      }),
+  );
   scrim.querySelector("[data-cancel]").onclick = () => scrim.remove();
   scrim.querySelector("[data-save]").onclick = () => {
     const patch = {
@@ -119,13 +144,24 @@ export function openLetterEditor(letter) {
       body: document.getElementById("lbody").value,
       color,
     };
-    if (isEdit) Store.updateLetter(l.id, patch); else Store.addLetter(patch);
-    scrim.remove(); state.openLetter = null; render();
+    if (isEdit) Store.updateLetter(l.id, patch);
+    else Store.addLetter(patch);
+    scrim.remove();
+    state.openLetter = null;
+    render();
   };
   if (isEdit) {
     scrim.querySelector("[data-del]").onclick = async () => {
-      if (await customDialog("Delete this note?", { isConfirm: true, isDanger: true })) {
-        Store.removeLetter(l.id); scrim.remove(); state.openLetter = null; render();
+      if (
+        await customDialog("Delete this note?", {
+          isConfirm: true,
+          isDanger: true,
+        })
+      ) {
+        Store.removeLetter(l.id);
+        scrim.remove();
+        state.openLetter = null;
+        render();
       }
     };
   }

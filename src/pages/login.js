@@ -26,12 +26,17 @@ export function renderLogin() {
     const expected = `${dy}${m}${y}`;
     const expectedAlt = `${y}${m}${dy}`;
     const expectedAlt2 = `${dy}${m}${y.slice(2)}`;
-    if (entered === expected || entered === expectedAlt || entered === expectedAlt2) {
+    if (
+      entered === expected ||
+      entered === expectedAlt ||
+      entered === expectedAlt2
+    ) {
       Store.unlock();
       location.hash = "#/home";
       render();
     } else {
-      document.getElementById("err").textContent = "not quite — try the date we began";
+      document.getElementById("err").textContent =
+        "not quite — try the date we began";
       document.getElementById("pwd").value = "";
     }
   });

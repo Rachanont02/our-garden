@@ -52,7 +52,21 @@
     if (window._fbLoaded) return;
     const [
       { initializeApp, getApps, getApp, deleteApp },
-      { getFirestore, doc, setDoc, onSnapshot, getDoc, collection, deleteDoc, addDoc, query, orderBy, limit, serverTimestamp, getDocs },
+      {
+        getFirestore,
+        doc,
+        setDoc,
+        onSnapshot,
+        getDoc,
+        collection,
+        deleteDoc,
+        addDoc,
+        query,
+        orderBy,
+        limit,
+        serverTimestamp,
+        getDocs,
+      },
     ] = await Promise.all([
       import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"),
       import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"),

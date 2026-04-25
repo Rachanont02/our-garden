@@ -49,7 +49,7 @@ const firebaseConfig = {
   projectId: "your-project",
   storageBucket: "your-project.appspot.com",
   messagingSenderId: "123...",
-  appId: "1:123:web:abc..."
+  appId: "1:123:web:abc...",
 };
 ```
 
@@ -64,6 +64,7 @@ const firebaseConfig = {
 ## 5. Import ข้อมูลเก่า (ถ้ามี)
 
 ถ้ามีข้อมูลใน localStorage อยู่แล้ว:
+
 1. เชื่อม Firebase เรียบร้อย
 2. กดปุ่ม **"Upload local data to cloud"** ในเมนูเฟือง
 

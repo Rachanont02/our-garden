@@ -58,12 +58,15 @@ export function showLogsDialog() {
 }
 
 export function renderAdminDrawer() {
-  document.querySelectorAll(".drawer-scrim, .drawer").forEach((el) => el.remove());
+  document
+    .querySelectorAll(".drawer-scrim, .drawer")
+    .forEach((el) => el.remove());
   if (!state.adminOpen) return;
   const d = Store.get();
   const scrim = document.createElement("div");
   scrim.className = "drawer-scrim";
-  scrim.style.cssText = "position:fixed;inset:0;background:rgba(40,46,30,.35);backdrop-filter:blur(4px);z-index:89";
+  scrim.style.cssText =
+    "position:fixed;inset:0;background:rgba(40,46,30,.35);backdrop-filter:blur(4px);z-index:89";
   document.body.appendChild(scrim);
 
   const drawer = document.createElement("div");
@@ -87,14 +90,18 @@ export function renderAdminDrawer() {
       <p style="font-family:var(--serif);font-style:italic;color:var(--ink-soft);font-size:14px;margin-bottom:12px;line-height:1.5">
         ${Store.cloud.connected ? "data syncs automatically across all devices. both of you see updates in realtime." : "free · syncs data between you & your partner automatically. see setup guide in FIREBASE_SETUP.md"}
       </p>
-      ${Store.cloud.connected ? `
+      ${
+        Store.cloud.connected
+          ? `
         <div class="drawer-actions">
           <button class="btn soft" id="pushCloudBtn">${icon("upload")} Push local to cloud</button>
           <button class="btn soft" id="disconnectCloudBtn" style="color:#a86060">Disconnect</button>
         </div>
-      ` : `
+      `
+          : `
         <button class="btn" id="connectCloudBtn">Connect to Firebase</button>
-      `}
+      `
+      }
     </div>
 
     <div class="drawer-section">
@@ -122,14 +129,21 @@ export function renderAdminDrawer() {
     </div>
   `;
   document.body.appendChild(drawer);
-  scrim.onclick = () => { state.adminOpen = false; renderAdminDrawer(); };
-  drawer.querySelector("[data-close]").onclick = () => { state.adminOpen = false; renderAdminDrawer(); };
+  scrim.onclick = () => {
+    state.adminOpen = false;
+    renderAdminDrawer();
+  };
+  drawer.querySelector("[data-close]").onclick = () => {
+    state.adminOpen = false;
+    renderAdminDrawer();
+  };
 
   drawer.querySelector("#saveCouple").onclick = () => {
     Store.setCouple({
       name1: document.getElementById("aname1").value.trim(),
       name2: document.getElementById("aname2").value.trim(),
-      motto: document.getElementById("amotto").value.trim() || "our little garden",
+      motto:
+        document.getElementById("amotto").value.trim() || "our little garden",
       anniversary: document.getElementById("aanniv").value,
     });
     state.adminOpen = false;
@@ -148,14 +162,22 @@ export function renderAdminDrawer() {
   const pushBtn = drawer.querySelector("#pushCloudBtn");
   if (pushBtn) pushBtn.onclick = () => Store.pushLocalToCloud();
   const disBtn = drawer.querySelector("#disconnectCloudBtn");
-  if (disBtn) disBtn.onclick = async () => {
-    if (await customDialog("Disconnect cloud sync? Local data stays.", { isConfirm: true })) {
-      await Store.disconnectCloud();
-      state.adminOpen = false;
-      renderAdminDrawer();
-      setTimeout(() => { state.adminOpen = true; renderAdminDrawer(); }, 50);
-    }
-  };
+  if (disBtn)
+    disBtn.onclick = async () => {
+      if (
+        await customDialog("Disconnect cloud sync? Local data stays.", {
+          isConfirm: true,
+        })
+      ) {
+        await Store.disconnectCloud();
+        state.adminOpen = false;
+        renderAdminDrawer();
+        setTimeout(() => {
+          state.adminOpen = true;
+          renderAdminDrawer();
+        }, 50);
+      }
+    };
   drawer.querySelector("#importBtn").onchange = async (e) => {
     const f = e.target.files[0];
     if (!f) return;
@@ -170,7 +192,12 @@ export function renderAdminDrawer() {
     }
   };
   drawer.querySelector("#resetBtn").onclick = async () => {
-    if (await customDialog("Really clear everything? This cannot be undone.", { isConfirm: true, isDanger: true })) {
+    if (
+      await customDialog("Really clear everything? This cannot be undone.", {
+        isConfirm: true,
+        isDanger: true,
+      })
+    ) {
       Store.resetAll();
       state.adminOpen = false;
       renderAdminDrawer();
@@ -213,19 +240,32 @@ export function openFirebaseConnect() {
   scrim.querySelector("[data-connect]").onclick = async () => {
     const raw = document.getElementById("fbcfg").value.trim();
     let cfg;
-    try { cfg = JSON.parse(raw); } catch {
+    try {
+      cfg = JSON.parse(raw);
+    } catch {
       try {
-        const cleaned = raw.replace(/^\s*(const|let|var)\s+\w+\s*=\s*/, "").replace(/;?\s*$/, "");
+        const cleaned = raw
+          .replace(/^\s*(const|let|var)\s+\w+\s*=\s*/, "")
+          .replace(/;?\s*$/, "");
         cfg = Function('"use strict";return(' + cleaned + ")")();
-      } catch (e) { alert("invalid config format"); return; }
+      } catch (e) {
+        alert("invalid config format");
+        return;
+      }
     }
-    if (!cfg.apiKey || !cfg.projectId) { alert("missing apiKey or projectId"); return; }
+    if (!cfg.apiKey || !cfg.projectId) {
+      alert("missing apiKey or projectId");
+      return;
+    }
     const ok = await Store.connectCloud(cfg);
     if (ok) {
       scrim.remove();
       state.adminOpen = false;
       renderAdminDrawer();
-      setTimeout(() => { state.adminOpen = true; renderAdminDrawer(); }, 50);
+      setTimeout(() => {
+        state.adminOpen = true;
+        renderAdminDrawer();
+      }, 50);
       alert("Connected to cloud ♡");
     }
   };
@@ -233,9 +273,17 @@ export function openFirebaseConnect() {
 
 export function wireTopbar() {
   const ab = document.getElementById("adminBtn");
-  if (ab) ab.onclick = () => { state.adminOpen = !state.adminOpen; renderAdminDrawer(); };
+  if (ab)
+    ab.onclick = () => {
+      state.adminOpen = !state.adminOpen;
+      renderAdminDrawer();
+    };
   const lb = document.getElementById("lockBtn");
-  if (lb) lb.onclick = () => { Store.lock(); render(); };
+  if (lb)
+    lb.onclick = () => {
+      Store.lock();
+      render();
+    };
 }
 
 export function topbar() {
@@ -251,6 +299,12 @@ export function topbar() {
 }
 
 export function menu(active) {
-  const items = [["home", "Home"], ["gallery", "Gallery"], ["letters", "Love Notes"], ["map", "Our Map"], ["playlist", "Our Playlist"]];
+  const items = [
+    ["home", "Home"],
+    ["gallery", "Gallery"],
+    ["letters", "Love Notes"],
+    ["map", "Our Map"],
+    ["playlist", "Our Playlist"],
+  ];
   return `<nav class="menu-nav">${items.map(([k, l]) => `<a href="#/${k}" class="${active === k ? "active" : ""}">${l}</a>`).join("")}</nav>`;
 }
