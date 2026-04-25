@@ -1,0 +1,15 @@
+export const state = {
+  root: document.getElementById("root"),
+  adminOpen: false,
+  openLetter: null,
+  openPlaceId: null,
+  gallerySearch: "",
+  ytPlayer: null,
+  ytState: -1,
+  ytVol: 100,
+  autoPlayNext: false,
+  selectedPhotos: [],
+  isSelectMode: false,
+  worldGeoJSON: null,
+  isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent),
+};

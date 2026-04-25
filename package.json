@@ -4,6 +4,8 @@
   "description": "",
   "main": "app.js",
   "scripts": {
+    "build": "esbuild src/main.js --bundle --minify --outfile=dist/app.js",
+    "dev": "esbuild src/main.js --bundle --outfile=dist/app.js --watch",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
