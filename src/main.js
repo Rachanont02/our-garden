@@ -39,7 +39,7 @@ function hideSkeleton() {
   }
 }
 
-export function render() {
+export async function render() {
   disposeCharts();
   if (state.ytPlayer) {
     try {
@@ -69,10 +69,10 @@ export function render() {
       renderGallery();
       break;
     case "map":
-      renderMap();
+      await renderMap();
       break;
     case "playlist":
-      renderPlaylist();
+      await renderPlaylist();
       break;
     default:
       location.hash = "#/home";

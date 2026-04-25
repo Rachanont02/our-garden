@@ -69,24 +69,36 @@ export function renderHome() {
     if (ytUrl) {
       const initPlayer = async () => {
         if (state.ytPlayer) return;
+        if (homePlayBtn) {
+          homePlayBtn.style.opacity = "0.5";
+          homePlayBtn.style.cursor = "wait";
+        }
         await loadYouTubeAPI();
         if (!window.YT || !window.YT.Player) return;
         const parsed = parseYouTubeUrl(ytUrl);
         if (!parsed.id) return;
 
-        let hState = -1;
         state.ytPlayer = new YT.Player("home-yt-frame", {
           height: "1px",
           width: "1px",
           videoId: parsed.id,
           host: "https://www.youtube-nocookie.com",
-          playerVars: { start: parsed.start, autoplay: 0 },
+          playerVars: {
+            start: parsed.start,
+            autoplay: 1,
+            origin: window.location.origin,
+          },
           events: {
             onReady: (e) => {
+              if (homePlayBtn) {
+                homePlayBtn.style.opacity = "1";
+                homePlayBtn.style.cursor = "pointer";
+              }
+              e.target.setVolume(state.ytVol);
               e.target.playVideo();
             },
             onStateChange: (e) => {
-              hState = e.data;
+              const hState = e.data;
               const vinyl = document.getElementById("homeVinyl");
               if (homePlayBtn)
                 homePlayBtn.innerHTML = icon(hState === 1 ? "pause" : "play");

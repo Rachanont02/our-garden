@@ -70,9 +70,15 @@ export async function renderPlaylist() {
 
   const playBtn = document.getElementById("playActive");
   if (playBtn) {
+    if (!state.ytPlayer || typeof state.ytPlayer.playVideo !== "function") {
+      playBtn.style.opacity = "0.5";
+      playBtn.style.cursor = "wait";
+    }
+
     playBtn.onclick = () => {
       if (!state.ytPlayer || typeof state.ytPlayer.playVideo !== "function") {
         state.autoPlayNext = true;
+        // Try to trigger a dummy play to "unlock" audio on some browsers
         return;
       }
       if (state.ytState === 1) state.ytPlayer.pauseVideo();
@@ -97,13 +103,22 @@ export async function renderPlaylist() {
           width: "1px",
           videoId: parsed.id,
           host: "https://www.youtube-nocookie.com",
-          playerVars: { start: parsed.start, autoplay: 0 },
+          playerVars: {
+            start: parsed.start,
+            autoplay: state.autoPlayNext ? 1 : 0,
+            origin: window.location.origin,
+          },
           events: {
             onReady: (e) => {
+              if (playBtn) {
+                playBtn.style.opacity = "1";
+                playBtn.style.cursor = "pointer";
+              }
               e.target.setVolume(state.ytVol);
               if (state.autoPlayNext) {
                 state.autoPlayNext = false;
-                setTimeout(() => e.target.playVideo(), 100);
+                // Some browsers might still block this, but autoplay:1 in playerVars helps
+                e.target.playVideo();
               }
             },
             onStateChange: (e) => {
@@ -114,6 +129,11 @@ export async function renderPlaylist() {
                   state.ytState === 1 ? "pause" : "play",
                 );
               if (wrap) wrap.classList.toggle("playing", state.ytState === 1);
+
+              if (state.ytState === 0) {
+                // Ended
+                document.getElementById("skipNextBtn").click();
+              }
             },
           },
         });

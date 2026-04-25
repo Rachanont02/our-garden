@@ -11,23 +11,30 @@ export function loadECharts() {
   });
 }
 
+let ytPromise = null;
 export function loadYouTubeAPI() {
-  return new Promise((resolve) => {
+  if (ytPromise) return ytPromise;
+  ytPromise = new Promise((resolve) => {
     if (window.YT && window.YT.Player) return resolve();
-    if (document.querySelector('script[src*="youtube.com/iframe_api"]')) {
-      const check = setInterval(() => {
-        if (window.YT && window.YT.Player) {
-          clearInterval(check);
-          resolve();
-        }
-      }, 100);
-      return;
+
+    const existing = document.querySelector(
+      'script[src*="youtube.com/iframe_api"]',
+    );
+    const cb = () => {
+      if (window.YT && window.YT.Player) resolve();
+      else setTimeout(cb, 100);
+    };
+
+    if (existing) {
+      cb();
+    } else {
+      window.onYouTubeIframeAPIReady = () => resolve();
+      const s = document.createElement("script");
+      s.src = "https://www.youtube.com/iframe_api";
+      document.head.appendChild(s);
     }
-    window.onYouTubeIframeAPIReady = () => resolve();
-    const s = document.createElement("script");
-    s.src = "https://www.youtube.com/iframe_api";
-    document.head.appendChild(s);
   });
+  return ytPromise;
 }
 
 export function disposeCharts() {
