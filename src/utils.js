@@ -156,11 +156,11 @@ export function parseYouTubeUrl(url) {
   return { id, start };
 }
 
-export function fileToDataURL(file) {
+export function fileToDataURL(file, asBlob = false) {
   return new Promise((res, rej) => {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    const MAX_DIM = isIOS ? 1000 : 1200;
-    const MAX_SIZE = isIOS ? 300 * 1024 : 500 * 1024;
+    const MAX_DIM = isIOS ? 1000 : 1280;
+    const MAX_SIZE = isIOS ? 250 * 1024 : 400 * 1024;
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
@@ -179,24 +179,26 @@ export function fileToDataURL(file) {
       ctx.imageSmoothingQuality = "high";
       ctx.drawImage(img, 0, 0, width, height);
 
-      let quality = 0.9;
-      let dataUrl = canvas.toDataURL("image/jpeg", quality);
-      while (dataUrl.length > MAX_SIZE && quality > 0.3) {
-        quality -= 0.05;
-        dataUrl = canvas.toDataURL("image/jpeg", quality);
-      }
-      res(dataUrl);
+      let quality = 0.85;
+      const format = "image/jpeg";
+
+      const getResult = () => {
+        if (asBlob) {
+          canvas.toBlob((blob) => res(blob), format, quality);
+        } else {
+          let dataUrl = canvas.toDataURL(format, quality);
+          // Simple heuristic to stay under limit
+          if (dataUrl.length > MAX_SIZE && quality > 0.4) {
+            quality -= 0.1;
+            dataUrl = canvas.toDataURL(format, quality);
+          }
+          res(dataUrl);
+        }
+      };
+      getResult();
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      if (file.size > 1024 * 1024) {
-        rej(
-          new Error(
-            "Image format not supported for compression and file is too large.",
-          ),
-        );
-        return;
-      }
       const r = new FileReader();
       r.onload = () => res(r.result);
       r.onerror = () => rej(r.error);

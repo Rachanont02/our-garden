@@ -186,7 +186,14 @@
     fb.unsubs.push(
       onSnapshot(collection(db, "gardens/ours/photos"), (snap) => {
         const arr = [];
-        snap.forEach((d) => arr.push(d.data()));
+        snap.forEach((d) => {
+          const item = d.data();
+          // Convert back from Uint8Array to Base64 for the UI
+          if (item.url && typeof item.url !== "string") {
+            item.url = Store.uint8ArrayToBase64(item.url);
+          }
+          arr.push(item);
+        });
         Store._data.photos = arr.sort(
           (a, b) => new Date(b.date) - new Date(a.date),
         );
@@ -252,9 +259,15 @@
         couple: data.couple || DEFAULT.couple,
         _migrated: true,
       });
-      if (data.photos)
-        for (let p of data.photos)
-          await setDoc(doc(fb.db, "gardens/ours/photos", p.id), p);
+      if (data.photos) {
+        for (let p of data.photos) {
+          const cloudP = { ...p };
+          if (typeof p.url === "string" && p.url.startsWith("data:")) {
+            cloudP.url = Store.base64ToUint8Array(p.url);
+          }
+          await setDoc(doc(fb.db, "gardens/ours/photos", p.id), cloudP);
+        }
+      }
       if (data.places)
         for (let p of data.places)
           await setDoc(doc(fb.db, "gardens/ours/places", p.id), p);
@@ -294,7 +307,15 @@
         const req = tx.objectStore(STORE_NAME).get(KEY);
         req.onsuccess = () => {
           if (req.result) {
-            const data = JSON.parse(req.result);
+            let data = req.result;
+            // Handle migration from old string-based IDB
+            if (typeof data === "string") {
+              try {
+                data = JSON.parse(data);
+              } catch {
+                data = structuredClone(DEFAULT);
+              }
+            }
             res({
               couple: { ...DEFAULT.couple, ...(data.couple || {}) },
               photos: data.photos || [],
@@ -326,7 +347,9 @@
     try {
       const db = await initDB();
       const tx = db.transaction(STORE_NAME, "readwrite");
-      tx.objectStore(STORE_NAME).put(JSON.stringify(data), KEY);
+      // Use structuredClone to ensure we are saving a clean object
+      // IndexedDB handles Blobs, Uint8Arrays, and nested objects natively!
+      tx.objectStore(STORE_NAME).put(data, KEY);
     } catch (e) {
       console.error("IDB save failed", e);
     }
@@ -358,6 +381,22 @@
       return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     },
 
+    base64ToUint8Array(base64) {
+      if (typeof base64 !== "string" || !base64.startsWith("data:"))
+        return base64;
+      const parts = base64.split(",");
+      const bin = atob(parts[1]);
+      const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      return arr;
+    },
+    uint8ArrayToBase64(arr, mime = "image/jpeg") {
+      if (!(arr instanceof Uint8Array)) return arr;
+      let bin = "";
+      for (let i = 0; i < arr.length; i++) bin += String.fromCharCode(arr[i]);
+      return `data:${mime};base64,${btoa(bin)}`;
+    },
+
     async addPhoto(p) {
       const obj = {
         id: this.uid(),
@@ -367,11 +406,17 @@
       this.set((d) => {
         d.photos.unshift(obj);
       });
-      if (fb.connected)
+      if (fb.connected) {
+        // Convert to Uint8Array for efficient Firestore storage
+        const cloudObj = { ...obj };
+        if (typeof cloudObj.url === "string" && cloudObj.url.startsWith("data:")) {
+          cloudObj.url = this.base64ToUint8Array(cloudObj.url);
+        }
         await window._fbLoaded.setDoc(
           window._fbLoaded.doc(fb.db, "gardens/ours/photos", obj.id),
-          obj,
+          cloudObj,
         );
+      }
     },
     async updatePhoto(id, patch) {
       let obj;
@@ -622,21 +667,23 @@
         ua: navigator.userAgent,
         ...extra,
       };
-      console.log(`[${type}] ${msg}`, extra);
+      // console.log(`[${type}] ${msg}`, extra);
 
       // Also push to local state for real-time debug view
       if (window.state && Array.isArray(window.state.logs)) {
         window.state.logs.unshift(entry);
         if (window.state.logs.length > 200) window.state.logs.pop();
-        // Custom event to notify debug panel if it exists
         window.dispatchEvent(new CustomEvent("sage-log", { detail: entry }));
       }
 
       if (fb.connected) {
         const { collection, addDoc, serverTimestamp } = window._fbLoaded;
         try {
+          // Ensure extra doesn't contain Blobs for logs
+          const cleanEntry = { ...entry };
+          delete cleanEntry.blob;
           await addDoc(collection(fb.db, "logs"), {
-            ...entry,
+            ...cleanEntry,
             serverTs: serverTimestamp(),
           });
         } catch (e) {
