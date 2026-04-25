@@ -12,6 +12,8 @@
   let ytState = -1; // -1: unstarted, 0: ended, 1: playing, 2: paused, 3: buffering, 5: cued
   let ytVol = 100;
   let autoPlayNext = false;
+  let selectedPhotos = [];
+  let isSelectMode = false;
 
   let worldGeoJSON = null;
   window.onYouTubeIframeAPIReady = () => {
@@ -542,43 +544,103 @@
           <div class="page-sub">every quiet thing, kept</div>
         </div>
         <div class="gallery-toolbar">
-          <div class="search-box">${icon("search")}<input type="text" placeholder="search captions or dates..." id="gsearch" value="${esc(gallerySearch)}"></div>
-          <button class="btn" id="addPhotoBtn">${icon("plus")} Add photo</button>
+          <div class="search-box">${icon("search")}<input type="text" placeholder="search..." id="gsearch" value="${esc(gallerySearch)}"></div>
+          <div style="display:flex;gap:8px">
+            ${isSelectMode ? `<button class="btn soft" id="cancelSelect">Cancel</button><button class="btn" id="bulkDeleteBtn" style="background:#a86060;border-color:#a86060">${icon("trash")} Delete (${selectedPhotos.length})</button>` : `<button class="btn soft" id="startSelect">${icon("heart")} Select</button><button class="btn" id="addPhotoBtn">${icon("plus")} Add photo</button>`}
+          </div>
         </div>
         ${
           photos.length === 0
             ? `<div class="empty"><span class="leaf">❦</span>${gallerySearch ? "no moments match that" : 'no photos yet — tap "add photo" to begin'}</div>`
             : `
-        <div class="masonry">
+        <div class="masonry ${isSelectMode ? "select-mode" : ""}">
           ${photos
-            .map(
-              (p) => `
-            <div class="m-item" data-photo="${esc(p.id)}">
+            .map((p) => {
+              const isSel = selectedPhotos.includes(p.id);
+              return `
+            <div class="m-item ${isSel ? "selected" : ""}" data-photo="${esc(p.id)}">
               ${p.url ? `<img src="${esc(p.url)}" alt="${esc(p.caption || "")}" loading="lazy">` : `<div class="m-ph">photo placeholder</div>`}
-              <button class="m-del" data-del="${esc(p.id)}" title="Remove">×</button>
+              <div class="m-sel-check">${isSel ? "✓" : ""}</div>
+              ${!isSelectMode ? `<button class="m-del" data-del="${esc(p.id)}" title="Remove">×</button>` : ""}
               ${p.caption || p.date ? `<div class="mcap"><span>${esc(p.caption || "")}</span><span class="mdate">${esc(fmtDate(p.date))}</span></div>` : ""}
             </div>
-          `,
-            )
+          `;
+            })
             .join("")}
         </div>`
         }
       </div>
     `;
     wireTopbar();
-    document.getElementById("addPhotoBtn").onclick = () => openPhotoEditor();
+
+    const addBtn = document.getElementById("addPhotoBtn");
+    if (addBtn) addBtn.onclick = () => openPhotoEditor();
+
+    const startSel = document.getElementById("startSelect");
+    if (startSel)
+      startSel.onclick = () => {
+        isSelectMode = true;
+        selectedPhotos = [];
+        renderGallery();
+      };
+
+    const cancelSel = document.getElementById("cancelSelect");
+    if (cancelSel)
+      cancelSel.onclick = () => {
+        isSelectMode = false;
+        selectedPhotos = [];
+        renderGallery();
+      };
+
+    const bulkDel = document.getElementById("bulkDeleteBtn");
+    if (bulkDel && selectedPhotos.length > 0) {
+      bulkDel.onclick = async () => {
+        if (
+          await customDialog(
+            `Delete ${selectedPhotos.length} selected photos?`,
+            { isConfirm: true, isDanger: true },
+          )
+        ) {
+          selectedPhotos.forEach((id) => Store.removePhoto(id));
+          selectedPhotos = [];
+          isSelectMode = false;
+          renderGallery();
+        }
+      };
+    }
+
     document.getElementById("gsearch").oninput = (e) => {
       gallerySearch = e.target.value;
-      // debounce-free, simple re-render
       renderGallery();
     };
+
     root.querySelectorAll("[data-photo]").forEach((el) => {
       el.onclick = (e) => {
         if (e.target.matches("[data-del]")) return;
-        const p = Store.get().photos.find((x) => x.id === el.dataset.photo);
-        if (p) showLightbox(p);
+        const id = el.dataset.photo;
+        if (isSelectMode) {
+          const check = el.querySelector(".m-sel-check");
+          if (selectedPhotos.includes(id)) {
+            selectedPhotos = selectedPhotos.filter((x) => x !== id);
+            el.classList.remove("selected");
+            if (check) check.textContent = "";
+          } else {
+            selectedPhotos.push(id);
+            el.classList.add("selected");
+            if (check) check.textContent = "✓";
+          }
+          // Update bulk delete button count
+          const bulkBtn = document.getElementById("bulkDeleteBtn");
+          if (bulkBtn) {
+            bulkBtn.innerHTML = `${icon("trash")} Delete (${selectedPhotos.length})`;
+          }
+        } else {
+          const p = Store.get().photos.find((x) => x.id === id);
+          if (p) showLightbox(p);
+        }
       };
     });
+
     root.querySelectorAll("[data-del]").forEach((b) => {
       b.onclick = async (e) => {
         e.stopPropagation();
@@ -622,7 +684,11 @@
       </div>
     `;
     document.body.appendChild(scrim);
-    scrim.querySelector("[data-cancel]").onclick = () => scrim.remove();
+    document.body.classList.add("no-scroll");
+    scrim.querySelector("[data-cancel]").onclick = () => {
+      document.body.classList.remove("no-scroll");
+      scrim.remove();
+    };
     scrim.querySelector("[data-save]").onclick = async () => {
       const url = document.getElementById("purl").value.trim();
       const files = document.getElementById("pfile").files;
@@ -652,6 +718,7 @@
             Store.addPhoto({ url: dataUrl, caption, date });
           }
         }
+        document.body.classList.remove("no-scroll");
         scrim.remove();
         render();
       } catch (err) {
@@ -716,17 +783,35 @@
   }
 
   function showLightbox(p) {
+    document.body.classList.add("no-scroll");
     const el = document.createElement("div");
     el.className = "lightbox";
     el.innerHTML = `
-      <button class="lclose">×</button>
+      <button class="lclose" aria-label="Close">×</button>
+      <button class="ldelete" aria-label="Delete">${icon("trash")}</button>
       <img src="${esc(p.url)}">
-      ${p.caption || p.date ? `<div class="lcap">${esc(p.caption || "")}${p.caption && p.date ? " · " : ""}${esc(fmtDate(p.date))}</div>` : ""}
+      ${p.caption || p.date ? `<div class="lcap">${esc(p.caption || "")}${p.caption && p.date ? " · " : ""}${esc(fmtDateLong(p.date))}</div>` : ""}
     `;
     document.body.appendChild(el);
     el.addEventListener("click", (e) => {
-      if (e.target === el || e.target.classList.contains("lclose")) el.remove();
+      if (e.target === el || e.target.classList.contains("lclose")) {
+        document.body.classList.remove("no-scroll");
+        el.remove();
+      }
     });
+    el.querySelector(".ldelete").onclick = async () => {
+      if (
+        await customDialog("Delete this memory permanently?", {
+          isConfirm: true,
+          isDanger: true,
+        })
+      ) {
+        Store.removePhoto(p.id);
+        document.body.classList.remove("no-scroll");
+        el.remove();
+        render();
+      }
+    };
   }
 
   // ---------- MAP ----------
@@ -970,7 +1055,7 @@
     if (openPlaceId) showPlaceDialog();
   }
 
-  function showPlaceDialog() {
+  function showPlaceDialog(initialScroll = 0) {
     const d = Store.get();
     const p = d.places.find((x) => x.id === openPlaceId);
     if (!p) {
@@ -983,32 +1068,67 @@
     const scrim = document.createElement("div");
     scrim.className = "scrim";
     scrim.innerHTML = `
-      <div class="dialog" style="max-width:620px">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
-          <div>
-            <h2>${esc(p.name)}</h2>
-            <div class="dsub">${esc(fmtDateLong(p.date))}</div>
+      <div class="dialog" style="max-width:680px">
+        <div class="dialog-header" style="align-items: center;">
+          <div class="header-left">
+            <div class="eyebrow">${esc(fmtDateLong(p.date))}</div>
+            <h2 style="margin-bottom:0">${esc(p.name)}</h2>
           </div>
-          <button class="icon-btn" data-close style="background:transparent">×</button>
+          <div style="display:flex;gap:8px;align-items:center">
+            ${isSelectMode ? `
+              <button class="btn" id="bulkDeletePlaceBtn" style="background:#a86060;border-color:#a86060;padding:6px 12px;font-size:13px">${icon("trash")} Delete (${selectedPhotos.length})</button>
+              <button class="btn soft" id="startPlaceSelect" style="padding:6px 12px;font-size:13px">Cancel</button>
+            ` : `
+              <button class="btn soft" id="startPlaceSelect" style="padding:6px 12px;font-size:13px">${icon("heart")} Select</button>
+              <button class="icon-btn close-dialog" data-close aria-label="Close">×</button>
+            `}
+          </div>
         </div>
-        ${p.note ? `<div style="font-family:var(--serif);font-size:18px;color:var(--ink-soft);font-style:italic;margin-bottom:8px;line-height:1.5">${esc(p.note)}</div>` : ""}
+        
+        ${p.note ? `<div class="place-note" style="margin-top:12px">${esc(p.note)}</div>` : ""}
+        
         <div class="divider"></div>
-        <div style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600">Photos from here</div>
-        <div class="place-photos">
-          ${legacyPhotos.map((src, i) => `<div class="pp" data-legacy-ppi="${i}"><img src="${esc(src)}"><button class="m-del" data-legacy-ppdel="${i}" style="display:flex">×</button></div>`).join("")}
-          ${pPhotos.map((ph) => `<div class="pp" data-ppid="${esc(ph.id)}"><img src="${esc(ph.url)}"><button class="m-del" data-ppdel="${esc(ph.id)}" style="display:flex">×</button></div>`).join("")}
-          <div class="pp-add" id="addPP">+</div>
+        
+        <div class="section-title">Photos from here</div>
+
+        <div class="place-photos ${isSelectMode ? "select-mode" : ""}">
+          ${legacyPhotos.map((src, i) => {
+            const id = `legacy-${i}`;
+            const isSel = selectedPhotos.includes(id);
+            return `
+            <div class="pp ${isSel ? "selected" : ""}" data-ppi="${id}">
+              <img src="${esc(src)}">
+              <div class="m-sel-check">${isSel ? "✓" : ""}</div>
+              ${!isSelectMode ? `<button class="m-del" data-legacy-ppdel="${i}">×</button>` : ""}
+            </div>
+          `;
+          }).join("")}
+          ${pPhotos.map((ph) => {
+            const isSel = selectedPhotos.includes(ph.id);
+            return `
+            <div class="pp ${isSel ? "selected" : ""}" data-ppid="${esc(ph.id)}">
+              <img src="${esc(ph.url)}">
+              <div class="m-sel-check">${isSel ? "✓" : ""}</div>
+              ${!isSelectMode ? `<button class="m-del" data-ppdel="${esc(ph.id)}">×</button>` : ""}
+            </div>
+          `;
+          }).join("")}
+          ${!isSelectMode ? `<div class="pp-add" id="addPP">+</div>` : ""}
         </div>
-        <div class="dialog-actions" style="margin-top:22px">
-          <button class="btn ghost" data-edit style="margin-right:auto">Edit place</button>
-          <button class="btn soft" data-close>Close</button>
+
+        <div class="dialog-footer">
+          <button class="btn ghost" data-edit>Edit place details</button>
+          <button class="btn" data-close>Done</button>
         </div>
       </div>
     `;
     document.body.appendChild(scrim);
+    if (initialScroll) scrim.querySelector(".dialog").scrollTop = initialScroll;
+    document.body.classList.add("no-scroll");
     scrim.addEventListener("click", (e) => {
       if (e.target === scrim) {
         openPlaceId = null;
+        document.body.classList.remove("no-scroll");
         scrim.remove();
       }
     });
@@ -1016,61 +1136,93 @@
       (b) =>
         (b.onclick = () => {
           openPlaceId = null;
+          document.body.classList.remove("no-scroll");
           scrim.remove();
         }),
     );
     scrim.querySelector("[data-edit]").onclick = () => {
+      isSelectMode = false;
+      selectedPhotos = [];
+      document.body.classList.remove("no-scroll");
       scrim.remove();
       openPlaceEditor(p);
     };
-    scrim.querySelector("#addPP").onclick = () => addPhotoToPlace(p.id);
-    scrim.querySelectorAll("[data-legacy-ppi]").forEach((el) => {
-      el.onclick = (e) => {
-        if (e.target.matches("[data-legacy-ppdel]")) return;
-        showLightbox({
-          url: legacyPhotos[+el.dataset.legacyPpi],
-          caption: p.name,
-          date: p.date,
-        });
+    const startBtn = scrim.querySelector("#startPlaceSelect");
+    if (startBtn)
+      startBtn.onclick = () => {
+        const currentScroll = scrim.querySelector(".dialog").scrollTop;
+        isSelectMode = !isSelectMode;
+        selectedPhotos = [];
+        scrim.remove();
+        showPlaceDialog(currentScroll);
       };
-    });
-    scrim.querySelectorAll("[data-legacy-ppdel]").forEach((b) => {
-      b.onclick = async (e) => {
-        e.stopPropagation();
+
+    const bulkBtn = scrim.querySelector("#bulkDeletePlaceBtn");
+    if (bulkBtn && selectedPhotos.length > 0) {
+      bulkBtn.onclick = async () => {
         if (
-          await customDialog("Remove this photo?", {
+          await customDialog(`Delete ${selectedPhotos.length} selected photos?`, {
             isConfirm: true,
             isDanger: true,
           })
         ) {
-          const i = +b.dataset.legacyPpdel;
-          const next = [...legacyPhotos];
-          next.splice(i, 1);
-          Store.updatePlace(p.id, { photos: next });
+          const nextLegacy = [...legacyPhotos];
+          const legacyToDelete = selectedPhotos
+            .filter((id) => id.startsWith("legacy-"))
+            .map((id) => parseInt(id.split("-")[1]))
+            .sort((a, b) => b - a);
+
+          legacyToDelete.forEach((idx) => nextLegacy.splice(idx, 1));
+          if (legacyToDelete.length > 0) {
+            Store.updatePlace(p.id, { photos: nextLegacy });
+          }
+
+          selectedPhotos
+            .filter((id) => !id.startsWith("legacy-"))
+            .forEach((id) => Store.removePhoto(id));
+
+          selectedPhotos = [];
+          isSelectMode = false;
           scrim.remove();
-          render();
+          showPlaceDialog();
         }
       };
-    });
-    scrim.querySelectorAll("[data-ppid]").forEach((el) => {
+    }
+
+    const addPP = scrim.querySelector("#addPP");
+    if (addPP) addPP.onclick = () => addPhotoToPlace(p.id);
+
+    scrim.querySelectorAll(".pp").forEach((el) => {
       el.onclick = (e) => {
-        if (e.target.matches("[data-ppdel]")) return;
-        const ph = Store.get().photos.find((x) => x.id === el.dataset.ppid);
-        if (ph) showLightbox(ph);
-      };
-    });
-    scrim.querySelectorAll("[data-ppdel]").forEach((b) => {
-      b.onclick = async (e) => {
-        e.stopPropagation();
-        if (
-          await customDialog("Remove this photo?", {
-            isConfirm: true,
-            isDanger: true,
-          })
-        ) {
-          Store.removePhoto(b.dataset.ppdel);
-          scrim.remove();
-          render();
+        if (e.target.matches("[data-legacy-ppdel], [data-ppdel]")) return;
+        const id = el.dataset.ppid || el.dataset.ppi;
+        if (isSelectMode) {
+          const check = el.querySelector(".m-sel-check");
+          if (selectedPhotos.includes(id)) {
+            selectedPhotos = selectedPhotos.filter((x) => x !== id);
+            el.classList.remove("selected");
+            if (check) check.textContent = "";
+          } else {
+            selectedPhotos.push(id);
+            el.classList.add("selected");
+            if (check) check.textContent = "✓";
+          }
+          // Update bulk delete button count
+          const bulkBtn = scrim.querySelector("#bulkDeletePlaceBtn");
+          if (bulkBtn) {
+            bulkBtn.innerHTML = `${icon("trash")} Delete (${selectedPhotos.length})`;
+          }
+        } else {
+          if (el.dataset.ppid) {
+            const ph = Store.get().photos.find((x) => x.id === el.dataset.ppid);
+            if (ph) showLightbox(ph);
+          } else {
+            showLightbox({
+              url: legacyPhotos[parseInt(el.dataset.ppi.split("-")[1])],
+              caption: p.name,
+              date: p.date,
+            });
+          }
         }
       };
     });
