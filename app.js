@@ -16,12 +16,6 @@
   let isSelectMode = false;
 
   let worldGeoJSON = null;
-  window.onYouTubeIframeAPIReady = () => {
-    // Re-render if we're on a page that needs the player
-    if (currentRoute().path === "home" || currentRoute().path === "playlist") {
-      render();
-    }
-  };
 
   // --- Global Error Logger ---
   window.onerror = (msg, url, line, col, error) => {
@@ -38,6 +32,54 @@
     });
   };
 
+  // --- Lazy Script Loaders (iPhone optimization) ---
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+  function loadECharts() {
+    return new Promise((resolve, reject) => {
+      if (window.echarts) return resolve();
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js";
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+
+  function loadYouTubeAPI() {
+    return new Promise((resolve) => {
+      if (window.YT && window.YT.Player) return resolve();
+      if (document.querySelector('script[src*="youtube.com/iframe_api"]')) {
+        // Already loading, just wait
+        const check = setInterval(() => {
+          if (window.YT && window.YT.Player) {
+            clearInterval(check);
+            resolve();
+          }
+        }, 100);
+        return;
+      }
+      window.onYouTubeIframeAPIReady = () => resolve();
+      const s = document.createElement("script");
+      s.src = "https://www.youtube.com/iframe_api";
+      document.head.appendChild(s);
+    });
+  }
+
+  // Dispose ECharts to free memory (critical for iOS)
+  function disposeCharts() {
+    try {
+      ["map", "miniMap"].forEach((id) => {
+        const dom = document.getElementById(id);
+        if (dom && window.echarts) {
+          const instance = echarts.getInstanceByDom(dom);
+          if (instance) instance.dispose();
+        }
+      });
+    } catch (e) {}
+    worldGeoJSON = null; // Free GeoJSON memory
+  }
+
   async function loadWorldMap() {
     if (worldGeoJSON) return;
     try {
@@ -45,7 +87,7 @@
         "https://cdn.jsdelivr.net/npm/echarts@4.9.0/map/json/world.json",
       );
       worldGeoJSON = await res.json();
-      echarts.registerMap("world", worldGeoJSON);
+      if (window.echarts) echarts.registerMap("world", worldGeoJSON);
     } catch (e) {
       console.error("Failed to load world map", e);
     }
@@ -746,9 +788,9 @@
 
   function fileToDataURL(file) {
     return new Promise((res, rej) => {
-      // Resize large images
-      const MAX_DIM = 1600;
-      const MAX_SIZE = 800 * 1024; // 800KB target
+      // Resize large images - smaller sizes for iOS to prevent WebKit crash
+      const MAX_DIM = isIOS ? 1000 : 1200;
+      const MAX_SIZE = isIOS ? 300 * 1024 : 500 * 1024;
       const img = new Image();
       const url = URL.createObjectURL(file);
       img.onload = () => {
@@ -871,7 +913,13 @@
     wireTopbar();
     document.getElementById("addPlaceBtn").onclick = () => openPlaceEditor();
 
+    await loadECharts();
+    if (!window.echarts) {
+      root.querySelector("#map").innerHTML = '<div class="empty"><span class="leaf">❦</span>Map could not be loaded on this device.</div>';
+      return;
+    }
     await loadWorldMap();
+    if (worldGeoJSON && window.echarts) echarts.registerMap("world", worldGeoJSON);
     const chartDom = document.getElementById("map");
     if (!chartDom) return;
 
@@ -1500,7 +1548,7 @@
 
   // ---------- Admin drawer ----------
   // ---------- PLAYLIST ----------
-  function renderPlaylist() {
+  async function renderPlaylist() {
     const d = Store.get();
     const songs = d.songs;
     const active = songs[0] || null;
@@ -1575,8 +1623,11 @@
     `;
     wireTopbar();
 
-    // YouTube API Integration
+    // YouTube API Integration - lazy load
     const playBtn = document.getElementById("playActive");
+    if (active && active.ytUrl) {
+      await loadYouTubeAPI();
+    }
     if (active && active.ytUrl && window.YT && window.YT.Player) {
       const parsed = parseYouTubeUrl(active.ytUrl);
       if (parsed.id) {
@@ -2104,6 +2155,14 @@
   }
 
   function render() {
+    // Dispose ECharts before removing DOM (memory cleanup for iOS)
+    disposeCharts();
+    // Destroy YouTube player when navigating away
+    if (ytPlayer) {
+      try { ytPlayer.destroy(); } catch (e) {}
+      ytPlayer = null;
+      ytState = -1;
+    }
     document.querySelectorAll(".scrim").forEach((el) => el.remove());
     const d = Store.get();
     if (!d.session.unlocked) {
