@@ -76,28 +76,41 @@ export async function renderPlaylist() {
     }
 
     playBtn.onclick = () => {
+      Store.log("debug", "Play button clicked", {
+        hasPlayer: !!state.ytPlayer,
+        ytState: state.ytState,
+      });
       if (!state.ytPlayer || typeof state.ytPlayer.playVideo !== "function") {
+        Store.log("debug", "Player not ready, setting autoPlayNext");
         state.autoPlayNext = true;
-        // Try to trigger a dummy play to "unlock" audio on some browsers
         return;
       }
-      if (state.ytState === 1) state.ytPlayer.pauseVideo();
-      else state.ytPlayer.playVideo();
+      if (state.ytState === 1) {
+        Store.log("debug", "Pausing video");
+        state.ytPlayer.pauseVideo();
+      } else {
+        Store.log("debug", "Playing video");
+        state.ytPlayer.playVideo();
+      }
     };
   }
 
   if (active && active.ytUrl) {
+    Store.log("debug", "Loading YouTube API", { url: active.ytUrl });
     await loadYouTubeAPI();
     if (window.YT && window.YT.Player) {
       const parsed = parseYouTubeUrl(active.ytUrl);
+      Store.log("debug", "Parsed YouTube URL", parsed);
       if (parsed.id) {
         if (state.ytPlayer) {
+          Store.log("debug", "Destroying existing player");
           try {
             state.ytPlayer.destroy();
           } catch (e) {}
           state.ytPlayer = null;
           state.ytState = -1;
         }
+        Store.log("debug", "Creating new YT.Player", { videoId: parsed.id });
         state.ytPlayer = new YT.Player("yt-player-frame", {
           height: "1px",
           width: "1px",
@@ -107,9 +120,13 @@ export async function renderPlaylist() {
             start: parsed.start,
             autoplay: state.autoPlayNext ? 1 : 0,
             origin: window.location.origin,
+            enablejsapi: 1,
           },
           events: {
             onReady: (e) => {
+              Store.log("debug", "Player onReady", {
+                autoPlayNext: state.autoPlayNext,
+              });
               if (playBtn) {
                 playBtn.style.opacity = "1";
                 playBtn.style.cursor = "pointer";
@@ -117,11 +134,11 @@ export async function renderPlaylist() {
               e.target.setVolume(state.ytVol);
               if (state.autoPlayNext) {
                 state.autoPlayNext = false;
-                // Some browsers might still block this, but autoplay:1 in playerVars helps
                 e.target.playVideo();
               }
             },
             onStateChange: (e) => {
+              Store.log("debug", "Player onStateChange", { newState: e.data });
               state.ytState = e.data;
               const wrap = document.querySelector(".player-cover-wrap");
               if (playBtn)
@@ -131,13 +148,18 @@ export async function renderPlaylist() {
               if (wrap) wrap.classList.toggle("playing", state.ytState === 1);
 
               if (state.ytState === 0) {
-                // Ended
+                Store.log("debug", "Video ended, skipping to next");
                 document.getElementById("skipNextBtn").click();
               }
+            },
+            onError: (e) => {
+              Store.log("error", "YouTube Player Error", { errorCode: e.data });
             },
           },
         });
       }
+    } else {
+      Store.log("error", "YouTube API loaded but YT.Player not found");
     }
   }
 

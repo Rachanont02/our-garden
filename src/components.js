@@ -123,12 +123,30 @@ export function renderAdminDrawer() {
       </div>
     </div>
 
+    <div class="drawer-section" style="background:${state.devMode ? "#e0f0f0" : "#faf6ed"}">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+        <h3 style="margin:0">Dev Mode</h3>
+        <label class="switch">
+          <input type="checkbox" id="devToggle" ${state.devMode ? "checked" : ""}>
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="ds" style="margin-bottom:0">enable debug logs on screen</div>
+    </div>
+
     <div class="drawer-section" style="background:#f6ecea;border-color:#e4cfcb">
       <h3 style="color:#a86060">Danger</h3>
       <button class="btn soft" id="resetBtn" style="color:#a86060;border-color:#d9b4ae">Reset everything</button>
     </div>
   `;
   document.body.appendChild(drawer);
+
+  drawer.querySelector("#devToggle").onchange = (e) => {
+    state.devMode = e.target.checked;
+    localStorage.setItem("devMode", state.devMode);
+    renderDebugPanel();
+    renderAdminDrawer();
+  };
   scrim.onclick = () => {
     state.adminOpen = false;
     renderAdminDrawer();
@@ -269,6 +287,39 @@ export function openFirebaseConnect() {
       alert("Connected to cloud ♡");
     }
   };
+}
+
+export function renderDebugPanel() {
+  let el = document.getElementById("debug-panel");
+  if (!state.devMode) {
+    if (el) el.remove();
+    return;
+  }
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "debug-panel";
+    el.style.cssText = `
+      position:fixed; bottom:20px; right:20px; width:300px; height:200px;
+      background:rgba(0,0,0,0.8); color:#0f0; font-family:monospace; font-size:10px;
+      padding:10px; border-radius:10px; z-index:9999; overflow-y:auto;
+      pointer-events:none; border:1px solid #0f0; box-shadow: 0 0 20px rgba(0,255,0,0.2);
+    `;
+    document.body.appendChild(el);
+    window.addEventListener("sage-log", (e) => {
+      const l = e.detail;
+      const div = document.createElement("div");
+      div.style.marginBottom = "4px";
+      div.textContent = `[${l.type}] ${l.msg}`;
+      el.appendChild(div);
+      el.scrollTop = el.scrollHeight;
+    });
+  }
+  el.innerHTML = state.logs
+    .slice(0, 50)
+    .reverse()
+    .map((l) => `<div>[${l.type}] ${l.msg}</div>`)
+    .join("");
+  el.scrollTop = el.scrollHeight;
 }
 
 export function wireTopbar() {

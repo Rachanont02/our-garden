@@ -1,5 +1,6 @@
 import { state } from "./state.js";
 import { disposeCharts } from "./loaders.js";
+import { renderDebugPanel } from "./components.js";
 import { renderLogin } from "./pages/login.js";
 import { renderHome } from "./pages/home.js";
 import { renderGallery } from "./pages/gallery.js";
@@ -40,6 +41,8 @@ function hideSkeleton() {
 }
 
 export async function render() {
+  const route = currentRoute();
+  Store.log("debug", "Rendering route: " + route.path);
   disposeCharts();
   if (state.ytPlayer) {
     try {
@@ -81,6 +84,8 @@ export async function render() {
 }
 
 // Initial boot
+window.state = state;
 Store.init().then(() => {
   render();
+  renderDebugPanel();
 });

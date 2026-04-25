@@ -12,4 +12,6 @@ export const state = {
   isSelectMode: false,
   worldGeoJSON: null,
   isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent),
+  devMode: localStorage.getItem("devMode") === "true",
+  logs: [],
 };

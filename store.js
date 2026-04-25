@@ -600,6 +600,15 @@
         ...extra,
       };
       console.log(`[${type}] ${msg}`, extra);
+
+      // Also push to local state for real-time debug view
+      if (window.state && Array.isArray(window.state.logs)) {
+        window.state.logs.unshift(entry);
+        if (window.state.logs.length > 200) window.state.logs.pop();
+        // Custom event to notify debug panel if it exists
+        window.dispatchEvent(new CustomEvent("sage-log", { detail: entry }));
+      }
+
       if (fb.connected) {
         const { collection, addDoc, serverTimestamp } = window._fbLoaded;
         try {
