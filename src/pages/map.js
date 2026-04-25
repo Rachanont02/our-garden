@@ -81,24 +81,38 @@ export async function renderMap() {
     .sort((a, b) => new Date(a.date) - new Date(b.date))
     .filter((p) => typeof p.lng === "number" && typeof p.lat === "number");
 
+  const pinIcon = L.divIcon({
+    className: "custom-marker",
+    html: `
+      <div class="pin-wrap">
+        <div class="pin-circle"></div>
+        <div class="pin-glow"></div>
+      </div>
+    `,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
+
   const markers = [];
   sortedPlaces.forEach((p) => {
-    const m = L.marker([p.lat, p.lng]).addTo(map);
+    const m = L.marker([p.lat, p.lng], { icon: pinIcon }).addTo(map);
     m.on("click", () => {
       state.openPlaceId = p.id;
       render();
     });
 
-    const fallback =
-      'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="160" height="106"><rect width="160" height="106" fill="%23f2f4ec"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="40">📍</text></svg>';
-
     m.bindTooltip(
       `
-      <div style="text-align:center; width: 140px; pointer-events: none;">
-        <div style="font-family:serif; font-weight: 600; font-size: 14px; color:#2a3625;">${esc(p.name)}</div>
-        <div style="font-size: 10px; color:#7a8a60; margin-top: 2px;">${fmtDate(p.date)}</div>
+      <div class="map-tooltip">
+        <div class="mt-title">${esc(p.name)}</div>
+        <div class="mt-date">${fmtDate(p.date)}</div>
       </div>`,
-      { direction: "top", offset: [0, -10], opacity: 0.9 },
+      {
+        direction: "top",
+        offset: [0, -10],
+        opacity: 1,
+        className: "premium-tooltip",
+      },
     );
 
     // Draw lines from Oslo
@@ -107,10 +121,11 @@ export async function renderMap() {
     );
     if (dist > 0.5) {
       L.polyline([osloCoord, [p.lat, p.lng]], {
-        color: "#ffffff",
-        weight: 1,
-        opacity: 0.3,
-        dashArray: "5, 10",
+        color: "var(--sage)",
+        weight: 1.5,
+        opacity: 0.25,
+        dashArray: "6, 12",
+        smoothFactor: 2,
       }).addTo(map);
     }
     markers.push(m);
@@ -119,14 +134,22 @@ export async function renderMap() {
   // Home marker
   L.marker(osloCoord, {
     icon: L.divIcon({
-      className: "home-marker",
-      html: `<div style="font-size:24px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5))">🏠</div>`,
-      iconSize: [30, 30],
-      iconAnchor: [15, 15],
+      className: "home-marker-premium",
+      html: `
+        <div class="home-pin">
+          <div class="home-icon">${icon("heart")}</div>
+          <div class="home-glow"></div>
+        </div>
+      `,
+      iconSize: [36, 36],
+      iconAnchor: [18, 18],
     }),
   })
     .addTo(map)
-    .bindTooltip("Home", { direction: "top" });
+    .bindTooltip("Home", {
+      direction: "top",
+      className: "premium-tooltip",
+    });
 
   if (markers.length > 0) {
     const group = new L.featureGroup([
@@ -407,14 +430,30 @@ export function openPlaceEditor(place) {
       "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
     ).addTo(miniMap);
 
-    let pin = L.marker([lat, lng]).addTo(miniMap);
+    let pin = L.marker([lat, lng], {
+      icon: L.divIcon({
+        className: "custom-marker small",
+        html: '<div class="pin-wrap"><div class="pin-circle"></div></div>',
+        iconSize: [16, 16],
+        iconAnchor: [8, 8],
+      }),
+    }).addTo(miniMap);
 
     miniMap.on("click", (e) => {
       const { lat: mlat, lng: mlng } = e.latlng;
       document.getElementById("nlat").value = mlat.toFixed(6);
       document.getElementById("nlng").value = mlng.toFixed(6);
       if (pin) pin.setLatLng([mlat, mlng]);
-      else pin = L.marker([mlat, mlng]).addTo(miniMap);
+      else {
+        pin = L.marker([mlat, mlng], {
+          icon: L.divIcon({
+            className: "custom-marker small",
+            html: '<div class="pin-wrap"><div class="pin-circle"></div></div>',
+            iconSize: [16, 16],
+            iconAnchor: [8, 8],
+          }),
+        }).addTo(miniMap);
+      }
     });
   }, 50);
 

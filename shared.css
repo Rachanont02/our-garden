@@ -427,15 +427,122 @@ body {
   margin: 20px 0;
 }
 
-/* Map Pins */
-.custom-pin {
-  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-  cursor: pointer;
-  filter: drop-shadow(0 4px 6px rgba(90, 100, 70, 0.3));
+/* Map Premium Styling */
+.custom-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.custom-pin:hover {
-  transform: scale(1.15) translateY(-4px);
-  filter: drop-shadow(0 8px 12px rgba(90, 100, 70, 0.4));
+.pin-wrap {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pin-circle {
+  width: 12px;
+  height: 12px;
+  background: var(--rose-gold);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(230, 185, 154, 0.6);
+  z-index: 2;
+  transition: transform 0.2s;
+}
+.custom-marker:hover .pin-circle {
+  transform: scale(1.3);
+}
+.pin-glow {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: var(--rose-gold);
+  border-radius: 50%;
+  opacity: 0.3;
+  animation: pinPulse 2s infinite ease-out;
+  z-index: 1;
+}
+@keyframes pinPulse {
+  0% { transform: scale(0.5); opacity: 0.8; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+.premium-tooltip {
+  background: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
+  padding: 10px 16px !important;
+}
+.premium-tooltip::before {
+  display: none !important;
+}
+.map-tooltip {
+  text-align: center;
+}
+.mt-title {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--sage-deep);
+}
+.mt-date {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.home-marker-premium {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.home-pin {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  background: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(184, 80, 80, 0.3);
+  border: 1.5px solid #f6ecea;
+}
+.home-icon {
+  width: 18px;
+  height: 18px;
+  color: #b85050;
+}
+.home-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+  stroke: none;
+}
+.home-glow {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: #b85050;
+  opacity: 0.1;
+  animation: homePulse 3s infinite;
+}
+@keyframes homePulse {
+  0% { transform: scale(1); opacity: 0.2; }
+  50% { transform: scale(1.3); opacity: 0.05; }
+  100% { transform: scale(1); opacity: 0.2; }
+}
+
+.custom-marker.small .pin-circle {
+  width: 8px;
+  height: 8px;
+  border-width: 1.5px;
 }
 /* Switch toggle */
 .switch {
