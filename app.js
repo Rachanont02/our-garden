@@ -997,11 +997,11 @@
                 src = `https://flagcdn.com/w160/${data.countryCode.toLowerCase()}.png`;
               }
               window._wikiImageCache[pName] = src;
-              callback(ticket, getHtml(src));
+              try { callback(ticket, getHtml(src)); } catch (e) {}
             })
             .catch(() => {
               window._wikiImageCache[pName] = fallback;
-              callback(ticket, getHtml(fallback));
+              try { callback(ticket, getHtml(fallback)); } catch (e) {}
             });
 
           return getHtml(fallback); // Show fallback while loading
