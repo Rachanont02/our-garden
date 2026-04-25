@@ -69,6 +69,17 @@ export async function renderPlaylist() {
   wireTopbar();
 
   const playBtn = document.getElementById("playActive");
+  if (playBtn) {
+    playBtn.onclick = () => {
+      if (!state.ytPlayer || typeof state.ytPlayer.playVideo !== "function") {
+        state.autoPlayNext = true;
+        return;
+      }
+      if (state.ytState === 1) state.ytPlayer.pauseVideo();
+      else state.ytPlayer.playVideo();
+    };
+  }
+
   if (active && active.ytUrl) {
     await loadYouTubeAPI();
     if (window.YT && window.YT.Player) {
@@ -108,17 +119,6 @@ export async function renderPlaylist() {
         });
       }
     }
-  }
-
-  if (playBtn) {
-    playBtn.onclick = () => {
-      if (!state.ytPlayer || typeof state.ytPlayer.playVideo !== "function") {
-        state.autoPlayNext = true;
-        return;
-      }
-      if (state.ytState === 1) state.ytPlayer.pauseVideo();
-      else state.ytPlayer.playVideo();
-    };
   }
 
   document.getElementById("skipBackBtn").onclick = () => {
