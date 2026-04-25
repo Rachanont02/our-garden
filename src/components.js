@@ -1,10 +1,6 @@
 import { state } from "./state.js";
 import { esc, icon, customDialog } from "./utils.js";
 import { render } from "./main.js";
-import { openLetterEditor } from "./pages/letters.js";
-import { openPhotoEditor } from "./pages/gallery.js";
-import { openPlaceEditor } from "./pages/map.js";
-import { openSongEditor } from "./pages/playlist.js";
 
 export function showLogsDialog() {
   const scrim = document.createElement("div");
@@ -90,6 +86,9 @@ export function renderAdminDrawer() {
       <button class="btn" id="saveCouple">Save</button>
     </div>
 
+    ${
+      state.devMode
+        ? `
     <div class="drawer-section" style="background:${Store.cloud.connected ? "#eaf0e0" : "#faf6ed"}">
       <h3>☁ Cloud Sync (Firebase) ${Store.cloud.connected ? '<span style="font-size:12px;color:var(--sage);font-style:italic;font-weight:400">· connected</span>' : ""}</h3>
       <p style="font-family:var(--serif);font-style:italic;color:var(--ink-soft);font-size:14px;margin-bottom:12px;line-height:1.5">
@@ -108,23 +107,18 @@ export function renderAdminDrawer() {
       `
       }
     </div>
+    `
+        : ""
+    }
 
     <div class="drawer-section">
       <h3>Back up &amp; restore</h3>
-      <div class="drawer-actions">
-        <button class="btn soft" id="exportBtn" style="flex:1">${icon("download")} Export</button>
-        <button class="btn soft" id="logsBtn" style="flex:1">${icon("settings")} Logs</button>
-        <label class="btn soft" style="cursor:pointer; flex:1">${icon("upload")} Import<input type="file" id="importBtn" accept="application/json" style="display:none"></label>
-      </div>
-    </div>
-
-    <div class="drawer-section">
-      <h3>Quick add</h3>
-      <div class="drawer-actions">
-        <button class="btn soft" data-quick="letter">${icon("letter")} Write note</button>
-        <button class="btn soft" data-quick="photo">${icon("photo")} Add photo</button>
-        <button class="btn soft" data-quick="place">${icon("map")} Add place</button>
-        <button class="btn soft" data-quick="song">${icon("music")} Add song</button>
+      <div class="drawer-actions" style="display:flex; flex-wrap:wrap; gap:8px;">
+        <button class="btn soft" id="exportBtn" style="flex:1; min-width:80px; justify-content:center; display:flex; align-items:center; gap:6px; font-size:14px;">${icon("download")} Export</button>
+        <button class="btn soft" id="logsBtn" style="flex:1; min-width:80px; justify-content:center; display:flex; align-items:center; gap:6px; font-size:14px;">${icon("settings")} Logs</button>
+        <label class="btn soft" style="flex:1; min-width:80px; cursor:pointer; justify-content:center; display:flex; align-items:center; gap:6px; font-size:14px;">
+          ${icon("upload")} Import<input type="file" id="importBtn" accept="application/json" style="display:none">
+        </label>
       </div>
     </div>
 
@@ -228,16 +222,6 @@ export function renderAdminDrawer() {
       render();
     }
   };
-  drawer.querySelectorAll("[data-quick]").forEach((b) => {
-    b.onclick = () => {
-      state.adminOpen = false;
-      renderAdminDrawer();
-      if (b.dataset.quick === "letter") openLetterEditor();
-      if (b.dataset.quick === "photo") openPhotoEditor();
-      if (b.dataset.quick === "place") openPlaceEditor();
-      if (b.dataset.quick === "song") openSongEditor();
-    };
-  });
 }
 
 export function openFirebaseConnect() {
