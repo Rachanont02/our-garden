@@ -26,35 +26,40 @@ export function showLogsDialog() {
   `;
   document.body.appendChild(scrim);
 
-  Store.getLogs(100).then((logs) => {
-    const list = document.getElementById("log-list");
-    if (!logs || logs.length === 0) {
-      list.innerHTML = "No logs found in cloud.";
-      return;
-    }
-    list.innerHTML = logs
-      .map((l) => {
-        const time = new Date(l.ts).toLocaleString();
-        const color =
-          l.type === "error" || l.type === "promise_error"
-            ? "#ff6b6b"
-            : l.type === "debug"
-              ? "#4dabf7"
-              : "#a9e34b";
-        return `<div style="margin-bottom:12px; border-bottom:1px solid #222; padding-bottom:8px;">
-        <div style="display:flex; justify-content:space-between; margin-bottom:4px">
-          <span style="color:${color}; font-weight:bold;">[${l.type.toUpperCase()}]</span>
-          <span style="color:#666; font-size:11px;">${time}</span>
-        </div>
-        <div style="color:#fff; margin-bottom:4px">${esc(l.msg)}</div>
-        ${l.placeId ? `<div style="color:#ffd43b">Place ID: ${l.placeId}</div>` : ""}
-        ${l.photoId ? `<div style="color:#ffd43b">Photo ID: ${l.photoId}</div>` : ""}
-        ${l.stack ? `<div style="color:#888; font-size:11px; background:#1a1a1a; padding:8px; border-radius:6px; margin:6px 0; overflow-x:auto;">${esc(l.stack)}</div>` : ""}
-        <div style="color:#555; font-size:10px; margin-top:4px;">Device: ${esc(l.ua)}</div>
-      </div>`;
-      })
-      .join("");
-  });
+  Store.getLogs(100)
+    .then((logs) => {
+      const list = document.getElementById("log-list");
+      if (!logs || logs.length === 0) {
+        list.innerHTML = "No logs found in cloud.";
+        return;
+      }
+      list.innerHTML = logs
+        .map((l) => {
+          const time = new Date(l.ts).toLocaleString();
+          const color =
+            l.type === "error" || l.type === "promise_error"
+              ? "#ff6b6b"
+              : l.type === "debug"
+                ? "#4dabf7"
+                : "#a9e34b";
+          return `<div style="margin-bottom:12px; border-bottom:1px solid #222; padding-bottom:8px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px">
+            <span style="color:${color}; font-weight:bold;">[${l.type.toUpperCase()}]</span>
+            <span style="color:#666; font-size:11px;">${time}</span>
+          </div>
+          <div style="color:#fff; margin-bottom:4px">${esc(l.msg)}</div>
+          ${l.placeId ? `<div style="color:#ffd43b">Place ID: ${l.placeId}</div>` : ""}
+          ${l.photoId ? `<div style="color:#ffd43b">Photo ID: ${l.photoId}</div>` : ""}
+          ${l.stack ? `<div style="color:#888; font-size:11px; background:#1a1a1a; padding:8px; border-radius:6px; margin:6px 0; overflow-x:auto;">${esc(l.stack)}</div>` : ""}
+          <div style="color:#555; font-size:10px; margin-top:4px;">Device: ${esc(l.ua)}</div>
+        </div>`;
+        })
+        .join("");
+    })
+    .catch((err) => {
+      const list = document.getElementById("log-list");
+      if (list) list.innerHTML = "Failed to load logs: " + esc(err.message);
+    });
 }
 
 export function renderAdminDrawer() {

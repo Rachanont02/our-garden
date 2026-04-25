@@ -244,7 +244,30 @@
     saveFBConfig(null);
   }
 
-  // pushToFirebase is removed as sync is now handled per-entity.
+  async function pushToFirebase(data) {
+    if (!fb.connected) return;
+    const { doc, setDoc } = window._fbLoaded;
+    try {
+      await setDoc(doc(fb.db, "gardens", "ours"), {
+        couple: data.couple || DEFAULT.couple,
+        _migrated: true,
+      });
+      if (data.photos)
+        for (let p of data.photos)
+          await setDoc(doc(fb.db, "gardens/ours/photos", p.id), p);
+      if (data.places)
+        for (let p of data.places)
+          await setDoc(doc(fb.db, "gardens/ours/places", p.id), p);
+      if (data.letters)
+        for (let p of data.letters)
+          await setDoc(doc(fb.db, "gardens/ours/letters", p.id), p);
+      if (data.songs)
+        for (let p of data.songs)
+          await setDoc(doc(fb.db, "gardens/ours/songs", p.id), p);
+    } catch (e) {
+      console.error("pushToFirebase error:", e);
+    }
+  }
 
   fb.clientId = Math.random().toString(36).slice(2);
 
